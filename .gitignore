@@ -1,0 +1,68 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments (Виртуальное окружение)
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI / Uvicorn / Gunicorn logs
+*.log
+
+# Environment variables (Секреты и настройки среды)
+.env
+.env.*
+!.env.example
+
+# IDEs and editors (Настройки редакторов кода)
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Testing and coverage (Тесты)
+.pytest_cache/
+.htmlcov/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Database (Локальные базы данных, если используете SQLite)
+*.sqlite3
+*.db

@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    container_name: fastapi_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Сервис Redis
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+
+  fastapi_server:
+    build: .
+    container_name: fastapi_web
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/code/app
+    
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
