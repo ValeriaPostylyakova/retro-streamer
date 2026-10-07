@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, String, func
@@ -6,6 +7,9 @@ from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.testing.schema import mapped_column
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.users.models import User
 
 
 class GameRender(Base):

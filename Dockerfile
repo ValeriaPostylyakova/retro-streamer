@@ -1,10 +1,17 @@
 FROM python:3.12-slim
 
-WORKDIR /code
 
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+WORKDIR /app
 
-COPY ./app /code/app
+
+COPY ./requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+
+
+COPY ./alembic.ini /app/alembic.ini
+COPY ./migrations /app/migrations
+
+
+COPY ./app /app/app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

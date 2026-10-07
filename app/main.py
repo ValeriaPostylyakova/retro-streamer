@@ -15,12 +15,3 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="fastapi_task_manager", lifespan=lifespan, debug=settings.DEBUG)
-
-
-def get_current_user():
-    return {
-        "id": 1,
-        "username": "admin",
-        "email": "admin@example.com",
-        "role": "admin",
-    }

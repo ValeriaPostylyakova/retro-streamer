@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.game_renders.models import GameRender
 
 
 class User(Base):
@@ -13,8 +17,8 @@ class User(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=UUID)
     email: Mapped[str] = mapped_column(unique=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[Enum] = mapped_column(
-        Enum("default", "premium"), nullable=False, default="default"
+    role: Mapped[str] = mapped_column(
+        Enum("default", "premium", name="user_role"), nullable=False, default="default"
     )
     is_active: Mapped[bool] = mapped_column(default=True)
 
