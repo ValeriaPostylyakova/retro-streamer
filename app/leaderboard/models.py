@@ -25,4 +25,4 @@ class Leaderboard(Base):
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    user: Mapped["User"] = relationship("User", back_populates="render_games")
+    user: Mapped["User"] = relationship("User")
