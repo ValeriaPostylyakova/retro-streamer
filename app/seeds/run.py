@@ -10,7 +10,7 @@ from app.leaderboard.models import Leaderboard
 from app.seeds.c01_users import UserSeeder
 from app.seeds.c02_game_renders import GameRenderSeeder
 from app.seeds.c03_leaderboard import LeaderboardSeeder
-from app.users.models import User
+from app.auth.models import User
 
 SEEDERS = [
     UserSeeder(),

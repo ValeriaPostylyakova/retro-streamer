@@ -3,7 +3,7 @@ from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.seeds.base_seeder import BaseSeeder
-from app.users.models import User
+from app.auth.models import User
 
 fake = Faker(["ru_RU"])
 ph = PasswordHasher()

@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -28,6 +30,7 @@ settings = Settings()
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_MINUTES = 10
+REFRESH_TOKEN_DAYS = 7
 
 password_hash = PasswordHash.recommended()
 
@@ -54,7 +57,7 @@ def create_access_token(
     now = datetime.now(timezone.utc)
 
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "iss": settings.jwt_issuer,
         "aud": settings.jwt_audience,
         "iat": now,
@@ -102,3 +105,11 @@ def unauthorized() -> HTTPException:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def create_refresh_token() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

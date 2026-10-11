@@ -4,15 +4,15 @@ from fastapi import Depends
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
+from app.auth.repositories import UserRepository
+from app.auth.services import UserService
 from app.core.database import get_db
 from app.core.security import (
     decode_access_token,
     oauth2_scheme,
     unauthorized,
 )
-from app.users.models import User
-from app.users.repositories import UserRepository
-from app.users.services import UserService
 
 
 async def get_users_repository(
@@ -46,7 +46,7 @@ async def get_current_user(
 
 
 if TYPE_CHECKING:
-    from app.users.models import User
+    from app.auth.models import User
 
 CurrentUser = Annotated[
     "User",

@@ -9,7 +9,7 @@ from sqlalchemy.testing.schema import mapped_column
 from app.core.database import Base
 
 if TYPE_CHECKING:
-    from app.users.models import User
+    from app.auth.models import User
 
 
 class Leaderboard(Base):

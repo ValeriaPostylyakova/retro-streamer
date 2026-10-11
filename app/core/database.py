@@ -18,9 +18,9 @@ async def get_db():
 
 
 try:
+    from app.auth.models import User
     from app.game_renders.models import GameRender
     from app.leaderboard.models import Leaderboard
-    from app.users.models import User
 
 except ImportError:
     pass
