@@ -5,8 +5,8 @@ from jwt.exceptions import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
-from app.auth.repositories import UserRepository
-from app.auth.services import UserService
+from app.auth.repositories import AuthRepository
+from app.auth.services import AuthService
 from app.core.database import get_db
 from app.core.security import (
     decode_access_token,
@@ -15,21 +15,21 @@ from app.core.security import (
 )
 
 
-async def get_users_repository(
+async def get_auth_repository(
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> UserRepository:
-    return UserRepository(db)
+) -> AuthRepository:
+    return AuthRepository(db)
 
 
-def get_users_service(
-    repository: UserRepository = Depends(get_users_repository),
-) -> UserService:
-    return UserService(repository)
+def get_auth_service(
+    repository: AuthRepository = Depends(get_auth_repository),
+) -> AuthService:
+    return AuthService(repository)
 
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    users_repo: Annotated[UserRepository, Depends(get_users_repository)],
+    auth_repo: Annotated[AuthRepository, Depends(get_auth_repository)],
 ) -> User:
     try:
         payload = decode_access_token(token)
@@ -37,7 +37,7 @@ async def get_current_user(
     except (InvalidTokenError, KeyError, TypeError):
         raise unauthorized()
 
-    user = await users_repo.get_user_by_id(user_id)
+    user = await auth_repo.get_user_by_id(user_id)
 
     if user is None or user.is_active is False:
         raise unauthorized()

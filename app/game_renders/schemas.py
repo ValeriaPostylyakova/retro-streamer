@@ -32,3 +32,8 @@ class GameInfoResponse(BaseModel):
     seed: int
     rules: GameRules
     initial_state: GameInitialState
+
+
+class GameRenderList(BaseModel):
+    command_hash: str
+    s3_key: str

@@ -1,12 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, String, func
-from sqlalchemy.orm import Mapped
-from sqlalchemy.testing.schema import mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.auth.models import User
 
 
 class GameRender(Base):
@@ -20,3 +23,5 @@ class GameRender(Base):
     s3_key: Mapped[str] = mapped_column(String(512), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    user: Mapped["User"] = relationship("User", back_populates="game_renders")

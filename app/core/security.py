@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
@@ -113,3 +113,23 @@ def create_refresh_token() -> str:
 
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def set_refresh_cookie(response: Response, refresh_token: str):
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_DAYS * 24 * 60 * 60,
+    )
+
+
+def delete_refresh_token(response: Response):
+    response.delete_cookie(
+        key="refresh_token",
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )

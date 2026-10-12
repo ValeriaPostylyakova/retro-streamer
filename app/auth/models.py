@@ -1,10 +1,14 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.game_renders.models import GameRender
 
 
 class User(Base):
@@ -23,6 +27,10 @@ class User(Base):
 
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
+    )
+
+    game_renders: Mapped[list["GameRender"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
 
