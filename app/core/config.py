@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     REDIS_HOST: str = Field(default="redis")
     REDIS_PORT: int = Field(default=6379)
 
-    S3_KEY_ID: str = Field(default="")
-    S3_SECRET: str = Field(default="")
+    S3_KEY_ID: str = Field(default="minioadmin")
+    S3_SECRET: str = Field(default="minioadmin")
     S3_BUCKET_NAME: str = Field(default="retro_streamer")
     S3_ENDPOINT_URL: str = Field(default="http://minio:9000")
 

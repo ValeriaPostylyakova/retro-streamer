@@ -1,3 +1,5 @@
+from enum import Enum
+
 from pydantic import BaseModel, Field
 
 
@@ -37,3 +39,16 @@ class GameInfoResponse(BaseModel):
 class GameRenderList(BaseModel):
     command_hash: str
     s3_key: str
+
+
+class RenderStatus(str, Enum):
+    SUCCESS = "SUCCESS"
+    PENDING = "PENDING"
+    FAILED = "FAILED"
+
+
+class GameRenderResponse(BaseModel):
+    status: RenderStatus
+    cached: bool
+    task_id: str | None = None
+    download_url: str | None = None
