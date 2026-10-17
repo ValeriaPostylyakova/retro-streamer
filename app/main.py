@@ -4,15 +4,15 @@ from fastapi import FastAPI
 
 from app.api.v1 import api_router
 from app.core.config import settings
-from app.core.redis_client import redis_client
+from app.core.redis_client import redis_async_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await redis_client.ping()
+    await redis_async_client.ping()
     print("Connected to Redis")
     yield
-    await redis_client.close()
+    await redis_async_client.close()
 
 
 app = FastAPI(title="fastapi_task_manager", lifespan=lifespan, debug=settings.DEBUG)

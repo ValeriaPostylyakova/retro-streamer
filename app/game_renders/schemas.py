@@ -37,7 +37,7 @@ class GameInfoResponse(BaseModel):
 
 
 class GameRenderList(BaseModel):
-    command_hash: str
+    commands_hash: str
     s3_key: str
 
 

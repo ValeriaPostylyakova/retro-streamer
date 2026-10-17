@@ -4,13 +4,13 @@ import traceback
 
 from sqlalchemy import delete
 
+from app.auth.models import User
 from app.core.database import async_session_maker
 from app.game_renders.models import GameRender
 from app.leaderboard.models import Leaderboard
 from app.seeds.c01_users import UserSeeder
 from app.seeds.c02_game_renders import GameRenderSeeder
 from app.seeds.c03_leaderboard import LeaderboardSeeder
-from app.auth.models import User
 
 SEEDERS = [
     UserSeeder(),

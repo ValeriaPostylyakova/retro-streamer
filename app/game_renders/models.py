@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class GameRender(Base):
     __tablename__ = "game_renders"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     game_name: Mapped[str] = mapped_column(String(50), nullable=False)

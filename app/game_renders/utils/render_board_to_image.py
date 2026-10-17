@@ -6,7 +6,6 @@ def render_board_to_image(board: list[list[int]], cell_size: int = 20) -> Image.
     grid_size = len(board)
     img_size = grid_size * cell_size
 
-    # Создаем пустое изображение (RGB)
     img = Image.new("RGB", (img_size, img_size), "#222222")
     draw = ImageDraw.Draw(img)
 

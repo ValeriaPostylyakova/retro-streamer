@@ -21,8 +21,10 @@ class Settings(BaseSettings):
 
     S3_KEY_ID: str = Field(default="minioadmin")
     S3_SECRET: str = Field(default="minioadmin")
-    S3_BUCKET_NAME: str = Field(default="retro_streamer")
     S3_ENDPOINT_URL: str = Field(default="http://minio:9000")
+
+    S3_PUBLIC_BUCKET: str = Field(default="retro-streamer-public")
+    S3_PRIVATE_BUCKET: str = Field(default="retro-streamer-private")
 
     @property
     def DATABASE_URL(self) -> str:
