@@ -1,6 +1,9 @@
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
+
+from app.schemas.base import BaseResponse
 
 
 class GameRenderRequest(BaseModel):
@@ -52,3 +55,10 @@ class GameRenderResponse(BaseModel):
     cached: bool
     task_id: str | None = None
     download_url: str | None = None
+
+
+class TaskStatusResponse(BaseResponse):
+    task_id: str
+    status: str
+    progress: int
+    result_data: Any | None = None
