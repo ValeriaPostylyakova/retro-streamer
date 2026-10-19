@@ -43,3 +43,5 @@ email-validator>=2.0.0
 python-multipart>=0.0.12
 imageio>=2.34.0
 Pillow>=10.4.0
+fastapi-pagination>=0.12.0
+

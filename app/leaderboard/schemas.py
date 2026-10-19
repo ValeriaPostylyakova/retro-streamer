@@ -7,15 +7,10 @@ from app.schemas.base import BaseResponse
 class UserNestedSchema(BaseResponse):
     id: UUID
     email: str
-    role: str
-    is_active: bool
 
 
 class GameRenderNestedSchema(BaseResponse):
     id: UUID
-    seed: int
-    season_id: int
-    game_name: str
     s3_key: str
 
 

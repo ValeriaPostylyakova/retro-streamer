@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -12,22 +12,33 @@ class LeaderboardRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_leaderbord_game_season(
-        self, game_name: str, season_id: int, seed: int
-    ) -> Sequence[Leaderboard]:
+    async def get_game_season_records(
+        self, game_name: str, season_id: int, seed: int, limit: int, offset: int
+    ) -> tuple[Sequence[Leaderboard], int]:
+
+        where_clauses = [
+            Leaderboard.game_name == game_name,
+            GameRender.seed == seed,
+            GameRender.season_id == season_id,
+        ]
+
         stmt = (
             select(Leaderboard)
             .join(Leaderboard.render)
             .options(joinedload(Leaderboard.user), joinedload(Leaderboard.render))
-            .where(
-                Leaderboard.game_name == game_name,
-                GameRender.seed == seed,
-                GameRender.season_id == season_id,
-            )
+            .where(*where_clauses)
             .order_by(Leaderboard.scope.desc(), Leaderboard.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         )
-
         result = await self.session.execute(stmt)
+        records = result.scalars().unique().all()
 
-        leaderboard_records = result.scalars().unique().all()
-        return leaderboard_records
+        count_stmt = (
+            select(func.count(Leaderboard.id))
+            .join(Leaderboard.render)
+            .where(*where_clauses)
+        )
+        total = await self.session.scalar(count_stmt) or 0
+
+        return records, total

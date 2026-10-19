@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from redis.asyncio import Redis
 
 from app.core.s3_client import S3AsyncService
+from app.game_renders.cache_keys import RedisKeyManager
 from app.game_renders.games.snake_game import SnakeGame
 from app.game_renders.repositories import GameRenderRepository
 from app.game_renders.schemas import (
@@ -44,49 +45,59 @@ class GameRenderService:
         user_id: UUID,
         request_data: GameRenderRequest,
     ) -> GameRenderResponse:
-
         hash_key = self._generate_idempotency_hash(request_data)
-        cache_key = f"game:gif:cache:{hash_key}"
-        cached_file_id = await self.redis_client.get(cache_key)
 
-        if cached_file_id:
+        cache_key = RedisKeyManager.game_cache(hash_key)
+        lock_key = RedisKeyManager.render_lock(hash_key)
+
+        cached_s3_key = await self.redis_client.get(cache_key)
+        if cached_s3_key:
+            if cached_s3_key == "PENDING":
+                return GameRenderResponse(status=RenderStatus.PENDING, cached=True)
+
             s3_download_url = await self.s3_client.get_file_url(
-                str(cached_file_id), is_public=False
+                str(cached_s3_key), is_public=False
             )
-
             return GameRenderResponse(
-                status=RenderStatus.SUCCESS,
-                download_url=s3_download_url,
-                cached=True,
+                status=RenderStatus.SUCCESS, download_url=s3_download_url, cached=True
             )
 
         db_record = await self.repository.get_render_by_commands_hash(
             commands_hash=hash_key
         )
-
         if db_record:
             await self.redis_client.set(cache_key, db_record.s3_key, ex=86400)
             s3_download_url = await self.s3_client.get_file_url(
                 db_record.s3_key, is_public=False
             )
             return GameRenderResponse(
-                status=RenderStatus.SUCCESS,
-                download_url=s3_download_url,
-                cached=True,
+                status=RenderStatus.SUCCESS, download_url=s3_download_url, cached=True
             )
 
-        task = generate_game_gif.delay(
-            seed=request_data.seed,
-            commands=request_data.commands,
-            cache_key=cache_key,
-            user_id=user_id,
-        )
+        is_locked = await self.redis_client.set(lock_key, "locked", nx=True, ex=60)
 
-        await self.redis_client.set(f"game:task:owner:{task.id}", str(user_id), ex=3600)
+        if not is_locked:
+            return GameRenderResponse(status=RenderStatus.PENDING, cached=False)
 
-        return GameRenderResponse(
-            task_id=task.id, status=RenderStatus.PENDING, cached=False
-        )
+        try:
+            await self.redis_client.set(cache_key, "PENDING", ex=300)
+
+            task = generate_game_gif.delay(
+                seed=request_data.seed,
+                commands=request_data.commands,
+                hash_key=hash_key,
+                user_id=user_id,
+            )
+
+            owner_key = RedisKeyManager.task_owner(task.id)
+            await self.redis_client.set(owner_key, str(user_id), ex=3600)
+
+            return GameRenderResponse(
+                task_id=task.id, status=RenderStatus.PENDING, cached=False
+            )
+
+        finally:
+            await self.redis_client.delete(lock_key)
 
     @staticmethod
     def create_new_game(seed: int) -> GameInfoResponse:
