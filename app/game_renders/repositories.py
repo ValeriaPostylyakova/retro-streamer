@@ -5,8 +5,8 @@ from app.game_renders.models import GameRender
 
 
 class GameRenderRepository:
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self, session: AsyncSession):
+        self.db_session = session
 
     async def get_render_by_commands_hash(
         self, commands_hash: str

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     @property
     def REDIS_URL(self) -> str:
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/1"
 
     @property
     def CELERY_BROKER_URL(self) -> str:

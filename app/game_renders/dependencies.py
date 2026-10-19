@@ -4,7 +4,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_async_session
 from app.core.redis_client import get_async_redis_client
 from app.core.s3_client import S3AsyncService, get_s3_async_client
 from app.game_renders.repositories import (
@@ -14,7 +14,7 @@ from app.game_renders.services import GameRenderService
 
 
 def get_game_render_repository(
-    db_session: Annotated[AsyncSession, Depends(get_db)],
+    db_session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> GameRenderRepository:
     return GameRenderRepository(db_session)
 

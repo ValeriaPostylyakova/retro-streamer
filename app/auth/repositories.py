@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -9,31 +9,31 @@ from app.auth.models import User, UserSession
 
 
 class AuthRepository:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
     async def create_user(self, user: User) -> User:
-        self.db.add(user)
+        self.session.add(user)
 
-        await self.db.commit()
-        await self.db.refresh(user)
+        await self.session.commit()
+        await self.session.refresh(user)
         return user
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
         statement = select(User).where(User.id == user_id)
-        result = await self.db.execute(statement)
+        result = await self.session.execute(statement)
         return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> User | None:
         statement = select(User).where(User.email == email)
-        result = await self.db.execute(statement)
+        result = await self.session.execute(statement)
         return result.scalar_one_or_none()
 
     async def create_user_session(self, user_session: UserSession) -> UserSession:
-        self.db.add(user_session)
+        self.session.add(user_session)
 
-        await self.db.commit()
-        await self.db.refresh(user_session)
+        await self.session.commit()
+        await self.session.refresh(user_session)
         return user_session
 
     async def rotate_refresh_token(
@@ -58,18 +58,18 @@ class AuthRepository:
                 .returning(UserSession.user_id)
             )
 
-            result = await self.db.execute(stmt)
+            result = await self.session.execute(stmt)
             user_id = result.scalar_one_or_none()
 
             if user_id is None:
-                await self.db.rollback()
+                await self.session.rollback()
                 return None
 
-            await self.db.commit()
+            await self.session.commit()
             return user_id
 
         except Exception:
-            await self.db.rollback()
+            await self.session.rollback()
             raise
 
     async def revoke_refresh_token(
@@ -82,26 +82,26 @@ class AuthRepository:
                 .where(
                     UserSession.refresh_token_hash == refresh_token_hash,
                     UserSession.revoked_at.is_(None),
-                    UserSession.expires_at > datetime.now(timezone.utc),
+                    UserSession.expires_at > datetime.now(UTC),
                 )
                 .values(
-                    revoked_at=datetime.now(timezone.utc),
+                    revoked_at=datetime.now(UTC),
                 )
                 .returning(UserSession.id)
             )
 
-            result = await self.db.execute(stmt)
+            result = await self.session.execute(stmt)
             session_id = result.scalar_one_or_none()
 
             if session_id is None:
-                await self.db.rollback()
+                await self.session.rollback()
                 return False
 
-            await self.db.commit()
+            await self.session.commit()
             return True
 
         except Exception:
-            await self.db.rollback()
+            await self.session.rollback()
             raise
 
     async def get_user_with_game_renders(self, user_id: UUID):
@@ -110,5 +110,5 @@ class AuthRepository:
             .where(User.id == user_id)
             .options(selectinload(User.game_renders))
         )
-        user_result = await self.db.execute(stmt)
+        user_result = await self.session.execute(stmt)
         return user_result.scalar_one_or_none()

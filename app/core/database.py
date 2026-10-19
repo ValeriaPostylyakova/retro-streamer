@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
@@ -26,13 +28,24 @@ sync_session_maker = sessionmaker(
 )
 
 
-async def get_db():
-    from app.auth.models import (
-        User,  # noqa: F401
-        UserSession,  # noqa: F401
-    )
-    from app.game_renders.models import GameRender  # noqa: F401
-    from app.leaderboard.models import Leaderboard  # noqa: F401
-
+async def get_async_session():
     async with async_session_maker() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@contextmanager
+def get_sync_session():
+    session = sync_session_maker()
+    try:
         yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

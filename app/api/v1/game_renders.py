@@ -16,16 +16,23 @@ from app.game_renders.services import GameRenderService
 router = APIRouter()
 
 
-@router.get("/info", response_model=GameInfoResponse)
+@router.get(
+    "/info",
+    summary="Получение информации о начальном положении игры",
+    description="Возвращает информацию о начальном положении игры в зависимости от параметра seed.",
+    status_code=status.HTTP_200_OK,
+    response_model=GameInfoResponse,
+)
 async def get_game_info(
-    service: GameRenderService = Depends(get_game_render_service),
+    current_user: CurrentUser,
     seed: int = Query(42, description="Сид для фиксации случайного генератора еды"),
+    service: GameRenderService = Depends(get_game_render_service),
 ):
 
     return service.create_new_game(seed)
 
 
-@router.post("/render", response_model=GameRenderResponse)
+@router.post("/render", summary="Запуск игры", response_model=GameRenderResponse)
 async def play_game_and_get_gif(
     current_user: CurrentUser,
     request_data: GameRenderRequest,

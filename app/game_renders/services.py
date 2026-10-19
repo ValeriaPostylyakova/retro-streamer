@@ -51,7 +51,7 @@ class GameRenderService:
 
         if cached_file_id:
             s3_download_url = await self.s3_client.get_file_url(
-                cached_file_id, is_public=False
+                str(cached_file_id), is_public=False
             )
 
             return GameRenderResponse(
@@ -114,7 +114,7 @@ class GameRenderService:
         if not task_owner_id or task_owner_id != str(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="У вас нет доступа к этой задаче.",
+                detail="У вас нет доступа к этой задаче или она устарела.",
             )
 
         state = async_result.state

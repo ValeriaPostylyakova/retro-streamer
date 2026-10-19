@@ -1,19 +1,19 @@
 import io
 import logging
 import random
-import uuid
 from uuid import UUID
 
 import imageio
 from celery.exceptions import Ignore
-from sqlalchemy import text
 
 from app.core.celery_app import celery_app
-from app.core.database import sync_session_maker as get_sync_db_session
+from app.core.database import get_sync_session
 from app.core.redis_client import get_sync_redis_client
 from app.core.s3_client import get_s3_sync_client
 from app.game_renders.games.snake_game import SnakeGame
+from app.game_renders.models import GameRender
 from app.game_renders.utils.render_board_to_image import render_board_to_image
+from app.leaderboard.models import Leaderboard
 
 logger = logging.getLogger(__name__)
 
@@ -64,27 +64,35 @@ def generate_game_gif(
     redis_client.set(cache_key, object_name, ex=86400)
 
     commands_hash = cache_key.split(":")[-1]
+    scope = game.score
 
-    with get_sync_db_session() as session:
-        try:
-            query = text(""" 
-                INSERT INTO game_renders (id, game_name, commands_hash, s3_key, user_id, created_at)
-                VALUES (:id, :game_name, :commands_hash, :s3_key, :user_id, NOW())
-                         """)
-            session.execute(
-                query,
-                {
-                    "id": uuid.uuid4(),
-                    "game_name": "snake",
-                    "commands_hash": commands_hash,
-                    "s3_key": object_name,
-                    "user_id": str(user_id),
-                },
-            )
-            session.commit()
-            logger.info(f"Game render saved to database: {object_name}")
-        except Exception as e:
-            session.rollback()
-            logger.error(f"Database save failed for task {self.request.id}: {e}")
+    with get_sync_session() as session:
+        new_render = GameRender(
+            user_id=user_id,
+            game_name="snake",
+            seed=seed,
+            season_id=1,
+            commands_hash=commands_hash,
+            s3_key=object_name,
+        )
+
+        session.add(new_render)
+
+        session.flush()
+
+        new_leaderbord = Leaderboard(
+            user_id=user_id,
+            game_name="snake",
+            scope=int(scope),
+            render_id=new_render.id,
+        )
+
+        session.add(new_leaderbord)
+        session.commit()
+
+        logger.info(
+            f"Game render and high score saved to database. "
+            f"Render: {object_name}, Score: {scope}"
+        )
 
     return object_name

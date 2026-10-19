@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.auth.repositories import AuthRepository
 from app.auth.services import AuthService
-from app.core.database import get_db
+from app.core.database import get_async_session
 from app.core.security import (
     decode_access_token,
     oauth2_scheme,
@@ -16,7 +16,7 @@ from app.core.security import (
 
 
 async def get_auth_repository(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> AuthRepository:
     return AuthRepository(db)
 
