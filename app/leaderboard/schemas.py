@@ -1,5 +1,8 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 from app.schemas.base import BaseResponse
 
@@ -17,8 +20,15 @@ class GameRenderNestedSchema(BaseResponse):
 class LeaderboardResponse(BaseResponse):
     id: int
     game_name: str
-    scope: int
+    score: int
     created_at: datetime
 
     user: UserNestedSchema
     render: GameRenderNestedSchema
+
+
+class CreateLeaderboardRequest(BaseModel):
+    user_id: UUID
+    game_name: Literal["snake", "tetris", "pacman"] = "snake"
+    score: int = Field(ge=0, le=100)
+    render_id: UUID

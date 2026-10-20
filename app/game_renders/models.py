@@ -23,7 +23,7 @@ class GameRender(Base):
     season_id: Mapped[int] = mapped_column(Integer, nullable=False)
     commands_hash: Mapped[str] = mapped_column(String(32), nullable=False)
     s3_key: Mapped[str] = mapped_column(String(512), nullable=False)
-
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="game_renders")

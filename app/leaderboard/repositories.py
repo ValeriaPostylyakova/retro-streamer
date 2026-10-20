@@ -1,6 +1,8 @@
 from collections.abc import Sequence
+from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -27,7 +29,7 @@ class LeaderboardRepository:
             .join(Leaderboard.render)
             .options(joinedload(Leaderboard.user), joinedload(Leaderboard.render))
             .where(*where_clauses)
-            .order_by(Leaderboard.scope.desc(), Leaderboard.created_at.desc())
+            .order_by(Leaderboard.score.desc(), Leaderboard.created_at.desc())
             .offset(offset)
             .limit(limit)
         )
@@ -42,3 +44,16 @@ class LeaderboardRepository:
         total = await self.session.scalar(count_stmt) or 0
 
         return records, total
+
+    async def save_leaderboard_record(
+        self, user_id: UUID, render_id: UUID, score: int, game_name: str
+    ) -> None:
+
+        stmt = insert(Leaderboard).values(
+            user_id=user_id, render_id=render_id, score=score, game_name=game_name
+        )
+
+        safe_stmt = stmt.on_conflict_do_nothing(index_elements=["user_id", "render_id"])
+
+        await self.session.execute(safe_stmt)
+        await self.session.commit()

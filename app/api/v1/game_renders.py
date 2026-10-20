@@ -8,7 +8,6 @@ from app.game_renders.dependencies import get_game_render_service
 from app.game_renders.schemas import (
     GameInfoResponse,
     GameRenderRequest,
-    GameRenderResponse,
     TaskStatusResponse,
 )
 from app.game_renders.services import GameRenderService
@@ -32,7 +31,7 @@ async def get_game_info(
     return service.create_new_game(seed)
 
 
-@router.post("/render", summary="Запуск игры", response_model=GameRenderResponse)
+@router.post("/render", summary="Запуск игры")
 async def play_game_and_get_gif(
     current_user: CurrentUser,
     request_data: GameRenderRequest,

@@ -17,7 +17,7 @@ class LeaderboardSeeder(BaseSeeder):
         #         leaderboard_entry = Leaderboard(
         #             user_id=render.user_id,
         #             game_name=render.game_name,
-        #             scope=random.randint(500, 100000),
+        #             score=random.randint(500, 100000),
         #             render_id=render.id,
         #         )
         #         session.add(leaderboard_entry)

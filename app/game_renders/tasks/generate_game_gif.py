@@ -1,10 +1,12 @@
 import io
+import json
 import logging
 import random
 from uuid import UUID
 
 import imageio
 from celery.exceptions import Ignore
+from sqlalchemy.dialects.postgresql import insert
 
 from app.core.celery_app import celery_app
 from app.core.database import get_sync_session
@@ -77,15 +79,14 @@ def generate_game_gif(
             file_bytes=gif_bytes, object_name=object_name, is_public=False
         )
 
-        redis_client.set(cache_key, object_name, ex=86400)
-
-        scope = game.score
+        score = game.score
 
         with get_sync_session() as session:
             new_render = GameRender(
                 user_id=user_id,
                 game_name="snake",
                 seed=seed,
+                score=int(score),
                 season_id=1,
                 commands_hash=hash_key,
                 s3_key=object_name,
@@ -93,18 +94,32 @@ def generate_game_gif(
             session.add(new_render)
             session.flush()
 
-            new_leaderbord = Leaderboard(
+            stmt = insert(Leaderboard).values(
                 user_id=user_id,
                 game_name="snake",
-                scope=int(scope),
+                score=int(score),
                 render_id=new_render.id,
             )
-            session.add(new_leaderbord)
+
+            # Говорим Postgres: "Если этот user_id уже отправлял этот render_id — ничего не делай"
+            safe_stmt = stmt.on_conflict_do_nothing(
+                index_elements=["user_id", "render_id"]
+            )
+
+            # Выполняем запрос
+            session.execute(safe_stmt)
             session.commit()
+
+            cache_data = {
+                "s3_key": object_name,
+                "render_id": str(new_render.id),
+                "score": int(score),
+            }
+            redis_client.set(cache_key, json.dumps(cache_data), ex=86400)
 
             logger.info(
                 f"Game render and high score saved to database. "
-                f"Render: {object_name}, Score: {scope}"
+                f"Render: {object_name}, Score: {score}"
             )
 
     except Exception as e:

@@ -47,14 +47,25 @@ class GameRenderList(BaseModel):
 class RenderStatus(str, Enum):
     SUCCESS = "SUCCESS"
     PENDING = "PENDING"
+    PROGRESS = "PROGRESS"
+    PROCESSING = "PROCESSING"
     FAILED = "FAILED"
 
 
 class GameRenderResponse(BaseModel):
     status: RenderStatus
-    cached: bool
-    task_id: str | None = None
-    download_url: str | None = None
+    task_id: str
+
+
+class GameRenderResponseCache(BaseModel):
+    status: str = RenderStatus.SUCCESS
+    download_url: str
+    expires_in: int = 300
+
+
+class GameRenderResponseProcessing(BaseModel):
+    status: str = RenderStatus.PENDING
+    detail: str = "Обработка задачи с этими командами находится в процессе"
 
 
 class TaskStatusResponse(BaseResponse):
