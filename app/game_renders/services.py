@@ -26,6 +26,7 @@ from app.game_renders.schemas import (
     TaskStatusResponse,
     TetrisInfoResponse,
     TetrisInitialState,
+    TetrisRenderRequest,
     TetrisRules,
 )
 from app.game_renders.tasks.generate_game_gif import generate_game_gif
@@ -48,14 +49,14 @@ class GameRenderService:
 
     def _generate_idempotency_hash(
         self,
-        request_data: SnakeRenderRequest,
+        request_data,
     ) -> str:
         commands_str = ",".join(request_data.commands)
         raw_string = f"{request_data.seed}:{commands_str}:{settings.CURRENT_SEASON_ID}"
         return hashlib.md5(raw_string.encode("utf-8")).hexdigest()
 
     async def process_game_render(
-        self, user_id: UUID, request_data: SnakeRenderRequest
+        self, user_id: UUID, request_data: SnakeRenderRequest | TetrisRenderRequest
     ):
         hash_key = self._generate_idempotency_hash(request_data)
         key = RedisKeyManager.game_cache(hash_key)
@@ -69,7 +70,7 @@ class GameRenderService:
                 user_id=user_id,
                 render_id=UUID(cache_data["render_id"]),
                 score=cache_data["score"],
-                game_name="snake",
+                game_name=request_data.game_name,
                 seed=request_data.seed,
             )
 
@@ -99,7 +100,7 @@ class GameRenderService:
                 user_id=user_id,
                 render_id=UUID(cache_data["render_id"]),
                 score=cache_data["score"],
-                game_name="snake",
+                game_name=request_data.game_name,
                 seed=request_data.seed,
             )
 
@@ -115,6 +116,7 @@ class GameRenderService:
             )
 
         task = generate_game_gif.delay(
+            game_name=request_data.game_name,
             seed=request_data.seed,
             commands=request_data.commands,
             hash_key=hash_key,

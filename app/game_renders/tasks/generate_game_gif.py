@@ -15,6 +15,7 @@ from app.core.redis_client import get_sync_redis_client
 from app.core.s3_client import get_s3_sync_client
 from app.game_renders.cache_keys import RedisKeyManager
 from app.game_renders.games.snake_game import SnakeGame
+from app.game_renders.games.tetris_game import TetrisGame
 from app.game_renders.models import GameRender
 from app.game_renders.utils.render_board_to_image import render_board_to_image
 from app.leaderboard.models import Leaderboard
@@ -30,22 +31,31 @@ logger = logging.getLogger(__name__)
 )
 def generate_game_gif(
     self,
+    game_name: str,
     seed: int,
     commands: list,
     hash_key: str,
     user_id: UUID,
 ):
     random.seed(seed)
-    game = SnakeGame()
+
+    if game_name == "snake":
+        game = SnakeGame()
+    elif game_name == "tetris":
+        game = TetrisGame()
+    else:
+        raise ValueError(f"Unknown game name: {game_name}")
+
     frames = []
 
     initial_board = game._get_board()
-    frames.append(render_board_to_image(initial_board))
+    frames.append(render_board_to_image(initial_board, game_name=game_name))
 
     for command in commands:
         try:
             board = game.step(command.lower())
-            frames.append(render_board_to_image(board))
+            frames.append(render_board_to_image(board, game_name=game_name))
+
             if game.game_over:
                 break
         except ValueError as e:
@@ -60,7 +70,6 @@ def generate_game_gif(
 
     if not frames:
         logger.warning(f"No frames generated for task {self.request.id}")
-
         redis_client = get_sync_redis_client()
         redis_client.delete(RedisKeyManager.game_cache(hash_key))
         return ""
@@ -69,7 +78,7 @@ def generate_game_gif(
         imageio.mimsave(gif_io, frames, format="GIF", fps=5, loop=0)
         gif_bytes = gif_io.getvalue()
 
-    object_name = f"games/{hash_key}.gif"
+    object_name = f"games/{game_name}/{hash_key}.gif"
 
     s3_client = get_s3_sync_client()
     redis_client = get_sync_redis_client()
@@ -84,7 +93,7 @@ def generate_game_gif(
 
         with get_sync_session() as session:
             new_render = GameRender(
-                game_name="snake",
+                game_name=game_name,
                 seed=seed,
                 score=int(score),
                 season_id=settings.CURRENT_SEASON_ID,
@@ -96,7 +105,7 @@ def generate_game_gif(
 
             stmt = insert(Leaderboard).values(
                 user_id=user_id,
-                game_name="snake",
+                game_name=game_name,
                 score=int(score),
                 render_id=new_render.id,
                 season_id=settings.CURRENT_SEASON_ID,
@@ -118,7 +127,7 @@ def generate_game_gif(
             redis_client.set(cache_key, json.dumps(cache_data), ex=86400)
 
             logger.info(
-                f"Game render and high score saved to database. "
+                f"[{game_name.upper()}] Game render and high score saved to database. "
                 f"Render: {object_name}, Score: {score}"
             )
 

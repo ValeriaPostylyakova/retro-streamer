@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -7,25 +8,29 @@ from app.schemas.base import BaseResponse
 
 
 class SnakeRenderRequest(BaseModel):
-    commands: list[str] = Field(
+    commands: list[Literal["up", "down", "left", "right"]] = Field(
         ...,
         max_length=50,
         min_length=2,
-        examples=[
-            "up",
-            "down",
-            "left",
-            "right",
-        ],
+        examples=[["up", "down", "left", "right"]],
     )
     seed: int = 5
+    game_name: str = "snake"
 
 
 class TetrisRenderRequest(BaseModel):
-    commands: list[str] = Field(
+    commands: list[
+        Literal[
+            "left",
+            "right",
+            "rotate",
+            "drop",
+            "none",
+        ]
+    ] = Field(
         ...,
         max_length=80,
-        min_length=1,
+        min_length=2,
         examples=[
             "left",
             "right",
@@ -35,6 +40,7 @@ class TetrisRenderRequest(BaseModel):
         ],
     )
     seed: int = 5
+    game_name: str = "tetris"
 
 
 class TetrisRules(BaseModel):

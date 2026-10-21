@@ -1,16 +1,31 @@
 from PIL import Image, ImageDraw
 
 
-def render_board_to_image(board: list[list[int]], cell_size: int = 20) -> Image.Image:
-    """Рисует матрицу поля с помощью Pillow."""
-    grid_size = len(board)
-    img_size = grid_size * cell_size
+def render_board_to_image(
+    board: list[list[int]], game_name: str = "snake", cell_size: int = 20
+) -> Image.Image:
 
-    img = Image.new("RGB", (img_size, img_size), "#222222")
+    rows = len(board)
+    cols = len(board[0]) if rows > 0 else 0
+
+    width = cols * cell_size
+    height = rows * cell_size
+
+    background_color = "#222222"
+    outline_color = "#333333"
+
+    img = Image.new("RGB", (width, height), background_color)
     draw = ImageDraw.Draw(img)
 
-    for r in range(grid_size):
-        for c in range(grid_size):
+    if game_name == "tetris":
+        color_1 = "#2196F3"
+        color_2 = "#FF9800"
+    else:
+        color_1 = "#4CAF50"
+        color_2 = "#FF5252"
+
+    for r in range(rows):
+        for c in range(cols):
             cell_type = board[r][c]
 
             x1 = c * cell_size
@@ -19,10 +34,12 @@ def render_board_to_image(board: list[list[int]], cell_size: int = 20) -> Image.
             y2 = y1 + cell_size - 1
 
             if cell_type == 1:
-                draw.rectangle([x1, y1, x2, y2], fill="#4CAF50")
+                draw.rectangle([x1, y1, x2, y2], fill=color_1)
             elif cell_type == 2:
-                draw.rectangle([x1, y1, x2, y2], fill="#FF5252")
+                draw.rectangle([x1, y1, x2, y2], fill=color_2)
             else:
-                draw.rectangle([x1, y1, x2, y2], outline="#333333", fill="#222222")
+                draw.rectangle(
+                    [x1, y1, x2, y2], outline=outline_color, fill=background_color
+                )
 
     return img

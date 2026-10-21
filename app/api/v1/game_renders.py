@@ -12,6 +12,7 @@ from app.game_renders.schemas import (
     SnakeRenderRequest,
     TaskStatusResponse,
     TetrisInfoResponse,
+    TetrisRenderRequest,
 )
 from app.game_renders.services import GameRenderService
 
@@ -51,10 +52,21 @@ async def get_tetris_game_info(
     return service.get_info_tetris(seed.value)
 
 
-@router.post("/render", summary="Запуск игры")
-async def play_game_and_get_gif(
+@router.post("/render/snake", summary="Запуск игры")
+async def play_game_snake(
     current_user: CurrentUser,
     request_data: SnakeRenderRequest,
+    _=Depends(role_rate_limiter()),
+    service: GameRenderService = Depends(get_game_render_service),
+):
+
+    return await service.process_game_render(current_user.id, request_data)
+
+
+@router.post("/render/tetris", summary="Запуск игры")
+async def play_game_tetris(
+    current_user: CurrentUser,
+    request_data: TetrisRenderRequest,
     _=Depends(role_rate_limiter()),
     service: GameRenderService = Depends(get_game_render_service),
 ):
