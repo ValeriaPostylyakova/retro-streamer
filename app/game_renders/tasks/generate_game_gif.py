@@ -9,6 +9,7 @@ from celery.exceptions import Ignore
 from sqlalchemy.dialects.postgresql import insert
 
 from app.core.celery_app import celery_app
+from app.core.config import settings
 from app.core.database import get_sync_session
 from app.core.redis_client import get_sync_redis_client
 from app.core.s3_client import get_s3_sync_client
@@ -33,7 +34,7 @@ def generate_game_gif(
     commands: list,
     hash_key: str,
     user_id: UUID,
-) -> str:
+):
     random.seed(seed)
     game = SnakeGame()
     frames = []
@@ -79,15 +80,14 @@ def generate_game_gif(
             file_bytes=gif_bytes, object_name=object_name, is_public=False
         )
 
-        score = game.score
+        score = int(game.score)
 
         with get_sync_session() as session:
             new_render = GameRender(
-                user_id=user_id,
                 game_name="snake",
                 seed=seed,
                 score=int(score),
-                season_id=1,
+                season_id=settings.CURRENT_SEASON_ID,
                 commands_hash=hash_key,
                 s3_key=object_name,
             )
@@ -99,14 +99,14 @@ def generate_game_gif(
                 game_name="snake",
                 score=int(score),
                 render_id=new_render.id,
+                season_id=settings.CURRENT_SEASON_ID,
+                seed=seed,
             )
 
-            # Говорим Postgres: "Если этот user_id уже отправлял этот render_id — ничего не делай"
             safe_stmt = stmt.on_conflict_do_nothing(
                 index_elements=["user_id", "render_id"]
             )
 
-            # Выполняем запрос
             session.execute(safe_stmt)
             session.commit()
 
@@ -122,6 +122,8 @@ def generate_game_gif(
                 f"Render: {object_name}, Score: {score}"
             )
 
+        return {"s3_key": object_name, "render_id": str(new_render.id), "score": score}
+
     except Exception as e:
         if self.request.retries == self.max_retries:
             logger.critical(
@@ -129,5 +131,3 @@ def generate_game_gif(
             )
             redis_client.delete(cache_key)
         raise e
-
-    return object_name

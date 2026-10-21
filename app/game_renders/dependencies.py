@@ -11,8 +11,10 @@ from app.game_renders.repositories import (
     GameRenderRepository,
 )
 from app.game_renders.services import GameRenderService
-from app.leaderboard.dependencies import get_leaderboard_repository
-from app.leaderboard.repositories import LeaderboardRepository
+from app.leaderboard.dependencies import (
+    get_leaderboard_service,
+)
+from app.leaderboard.services import LeaderboardService
 
 
 def get_game_render_repository(
@@ -25,11 +27,11 @@ async def get_game_render_service(
     redis_client: Redis = Depends(get_async_redis_client),
     s3_client: S3AsyncService = Depends(get_s3_async_client),
     repository: GameRenderRepository = Depends(get_game_render_repository),
-    leaderboard_repository: LeaderboardRepository = Depends(get_leaderboard_repository),
+    leaderboard_service: LeaderboardService = Depends(get_leaderboard_service),
 ) -> GameRenderService:
     return GameRenderService(
         redis_client=redis_client,
         s3_client=s3_client,
         repository=repository,
-        leaderboard_repository=leaderboard_repository,
+        leaderboard_service=leaderboard_service,
     )

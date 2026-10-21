@@ -3,7 +3,6 @@ from uuid import UUID
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.auth.models import User, UserSession
 
@@ -103,12 +102,3 @@ class AuthRepository:
         except Exception:
             await self.session.rollback()
             raise
-
-    async def get_user_with_game_renders(self, user_id: UUID):
-        stmt = (
-            select(User)
-            .where(User.id == user_id)
-            .options(selectinload(User.game_renders))
-        )
-        user_result = await self.session.execute(stmt)
-        return user_result.scalar_one_or_none()

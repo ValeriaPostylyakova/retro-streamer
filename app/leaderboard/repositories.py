@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.config import settings
 from app.game_renders.models import GameRender
 from app.leaderboard.models import Leaderboard
 
@@ -46,11 +47,16 @@ class LeaderboardRepository:
         return records, total
 
     async def save_leaderboard_record(
-        self, user_id: UUID, render_id: UUID, score: int, game_name: str
+        self, user_id: UUID, render_id: UUID, score: int, game_name: str, seed: int
     ) -> None:
 
         stmt = insert(Leaderboard).values(
-            user_id=user_id, render_id=render_id, score=score, game_name=game_name
+            user_id=user_id,
+            render_id=render_id,
+            score=score,
+            game_name=game_name,
+            season_id=settings.CURRENT_SEASON_ID,
+            seed=seed,
         )
 
         safe_stmt = stmt.on_conflict_do_nothing(index_elements=["user_id", "render_id"])

@@ -53,7 +53,7 @@ class S3AsyncService(S3Base):
                     "Key": object_name,
                     "ResponseContentDisposition": f'attachment; filename="{filename}"',
                 },
-                ExpiresIn=3600,
+                ExpiresIn=300,
             )
         return url
 
@@ -95,7 +95,7 @@ class S3SyncService(S3Base):
                 "Key": object_name,
                 "ResponseContentDisposition": f'attachment; filename="{filename}"',
             },
-            ExpiresIn=3600,
+            ExpiresIn=300,
         )
         return url
 

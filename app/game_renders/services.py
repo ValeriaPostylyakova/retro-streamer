@@ -3,9 +3,10 @@ import json
 from uuid import UUID
 
 from celery.result import AsyncResult
-from fastapi import HTTPException, status
 from redis.asyncio import Redis
 
+from app.core.config import settings
+from app.core.exceptions import ApplicationError
 from app.core.s3_client import S3AsyncService
 from app.game_renders.cache_keys import RedisKeyManager
 from app.game_renders.games.snake_game import SnakeGame
@@ -16,12 +17,14 @@ from app.game_renders.schemas import (
     GameRenderRequest,
     GameRenderResponse,
     GameRenderResponseCache,
+    GameRenderResultDTO,
     GameRules,
     RenderStatus,
     TaskStatusResponse,
 )
 from app.game_renders.tasks.generate_game_gif import generate_game_gif
-from app.leaderboard.repositories import LeaderboardRepository
+from app.leaderboard.schemas import LeaderboardCreateDTO
+from app.leaderboard.services import LeaderboardService
 
 
 class GameRenderService:
@@ -30,19 +33,19 @@ class GameRenderService:
         redis_client: Redis,
         s3_client: S3AsyncService,
         repository: GameRenderRepository,
-        leaderboard_repository: LeaderboardRepository,
+        leaderboard_service: LeaderboardService,
     ):
         self.redis_client = redis_client
         self.s3_client = s3_client
         self.repository = repository
-        self.leaderboard_repository = leaderboard_repository
+        self.leaderboard_service = leaderboard_service
 
     def _generate_idempotency_hash(
         self,
         request_data: GameRenderRequest,
     ) -> str:
         commands_str = ",".join(request_data.commands)
-        raw_string = f"{request_data.seed}:{commands_str}"
+        raw_string = f"{request_data.seed}:{commands_str}:{settings.CURRENT_SEASON_ID}"
         return hashlib.md5(raw_string.encode("utf-8")).hexdigest()
 
     async def process_game_render(self, user_id: UUID, request_data: GameRenderRequest):
@@ -54,17 +57,24 @@ class GameRenderService:
         if cached_data_raw:
             cache_data = json.loads(cached_data_raw)
 
-            await self.leaderboard_repository.save_leaderboard_record(
+            leaderboard_dto = LeaderboardCreateDTO(
                 user_id=user_id,
-                render_id=cache_data["render_id"],
+                render_id=UUID(cache_data["render_id"]),
                 score=cache_data["score"],
                 game_name="snake",
+                seed=request_data.seed,
             )
+
+            await self.leaderboard_service.save_leaderboard_record(leaderboard_dto)
 
             s3_download_url = await self.s3_client.get_file_url(
                 cache_data["s3_key"], is_public=False
             )
-            return GameRenderResponseCache(download_url=s3_download_url)
+            return GameRenderResponseCache(
+                download_url=s3_download_url,
+                score=cache_data["score"],
+                render_id=UUID(cache_data["render_id"]),
+            )
 
         db_record = await self.repository.get_render_by_commands_hash(
             commands_hash=hash_key
@@ -77,17 +87,24 @@ class GameRenderService:
             }
             await self.redis_client.set(key, json.dumps(cache_data), ex=86400)
 
-            await self.leaderboard_repository.save_leaderboard_record(
+            leaderboard_dto = LeaderboardCreateDTO(
                 user_id=user_id,
-                render_id=db_record.id,
-                score=db_record.score,
+                render_id=UUID(cache_data["render_id"]),
+                score=cache_data["score"],
                 game_name="snake",
+                seed=request_data.seed,
             )
+
+            await self.leaderboard_service.save_leaderboard_record(dto=leaderboard_dto)
 
             s3_download_url = await self.s3_client.get_file_url(
                 db_record.s3_key, is_public=False
             )
-            return GameRenderResponseCache(download_url=s3_download_url)
+            return GameRenderResponseCache(
+                download_url=s3_download_url,
+                score=cache_data["score"],
+                render_id=UUID(cache_data["render_id"]),
+            )
 
         task = generate_game_gif.delay(
             seed=request_data.seed,
@@ -102,7 +119,7 @@ class GameRenderService:
         return GameRenderResponse(task_id=task.id, status=RenderStatus.PENDING)
 
     @staticmethod
-    def create_new_game(seed: int) -> GameInfoResponse:
+    def get_info(seed: int) -> GameInfoResponse:
         game = SnakeGame()
 
         return GameInfoResponse(
@@ -125,23 +142,38 @@ class GameRenderService:
         task_owner_id = await self.redis_client.get(cache_key)
 
         if not task_owner_id or task_owner_id != str(user_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="У вас нет доступа к этой задаче или она устарела.",
+            raise ApplicationError(
+                detail="Задача не найдена или у вас нет к ней доступа.",
+                status_code=404,
             )
 
         state = async_result.state
         progress = 0
         result_data = None
+        error_message = None
 
-        if state == RenderStatus.PROGRESS or state == RenderStatus.PROCESSING:
+        if state in (RenderStatus.PROGRESS, RenderStatus.PROCESSING):
             progress = async_result.info.get("progress", 0) if async_result.info else 0
         elif state == RenderStatus.SUCCESS:
             progress = 100
             result_data = async_result.result
+
+            s3_download_url = await self.s3_client.get_file_url(
+                result_data["s3_key"], is_public=False
+            )
+
+            result_data = GameRenderResultDTO(
+                render_id=UUID(result_data["render_id"]),
+                score=result_data["score"],
+                download_url=s3_download_url,
+            )
         elif state == RenderStatus.FAILED:
-            result_data = {"error": str(async_result.result)}
+            error_message = str(async_result.result)
 
         return TaskStatusResponse(
-            task_id=task_id, status=state, progress=progress, result_data=result_data
+            task_id=task_id,
+            status=state,
+            progress=progress,
+            result=result_data,
+            error=error_message,
         )

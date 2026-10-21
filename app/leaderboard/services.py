@@ -1,4 +1,5 @@
 from app.leaderboard.repositories import LeaderboardRepository
+from app.leaderboard.schemas import LeaderboardCreateDTO
 from app.schemas.common import LimitOffsetResponse
 
 
@@ -20,4 +21,13 @@ class LeaderboardService:
 
         return LimitOffsetResponse(
             items=list(records), total=total, limit=limit, offset=offset
+        )
+
+    async def save_leaderboard_record(self, dto: LeaderboardCreateDTO):
+        await self.repository.save_leaderboard_record(
+            user_id=dto.user_id,
+            render_id=dto.render_id,
+            score=dto.score,
+            game_name=dto.game_name,
+            seed=dto.seed,
         )

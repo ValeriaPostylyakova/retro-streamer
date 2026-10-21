@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
-
-from fastapi import HTTPException, status
 
 from app.auth.models import User, UserSession
 from app.auth.repositories import AuthRepository
@@ -9,6 +7,7 @@ from app.auth.schemas import (
     LoginRequest,
     RegisterRequest,
 )
+from app.core.exceptions import ApplicationError
 from app.core.security import (
     REFRESH_TOKEN_DAYS,
     create_access_token,
@@ -24,7 +23,7 @@ class AuthService:
         self.repository = auth_repository
 
     async def _generate_tokens_and_session(self, user_id: UUID) -> tuple[str, str]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         refresh_token = create_refresh_token()
 
         user_session = UserSession(
@@ -40,9 +39,10 @@ class AuthService:
     async def register_user(self, form_data: RegisterRequest) -> tuple[User, str, str]:
         user = await self.repository.get_user_by_email(form_data.email)
         if user is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+            raise ApplicationError(
                 detail="Пользователь с таким email уже существует",
+                status_code=409,
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         new_user = User(
@@ -63,16 +63,16 @@ class AuthService:
         if user is None or not verify_password(
             form_data.password, user.hashed_password
         ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+            raise ApplicationError(
                 detail="Неверный email или пароль",
+                status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+            raise ApplicationError(
                 detail="Пользователь заблокирован",
+                status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -80,7 +80,7 @@ class AuthService:
         return user, access_token, refresh_token
 
     async def rotate_refresh_token(self, refresh_token: str) -> tuple[str, str]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(days=REFRESH_TOKEN_DAYS)
 
         new_refresh_token = create_refresh_token()
@@ -93,9 +93,9 @@ class AuthService:
         )
 
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Невалидный refresh token",
+            raise ApplicationError(
+                detail="Неверный refresh token",
+                status_code=401,
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -107,6 +107,3 @@ class AuthService:
         await self.repository.revoke_refresh_token(
             refresh_token_hash=hash_refresh_token(refresh_token),
         )
-
-    async def get_user_with_game_renders(self, user_id: UUID):
-        return await self.repository.get_user_with_game_renders(user_id)

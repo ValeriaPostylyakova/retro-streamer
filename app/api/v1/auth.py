@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Cookie, Depends, Response, status
 
-from app.auth.dependencies import CurrentUser, get_auth_service
+from app.auth.dependencies import get_auth_service
 from app.auth.schemas import (
     BaseUser,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
-    UserDetailResponse,
     UserResponse,
 )
 from app.auth.services import AuthService
@@ -102,16 +101,3 @@ async def logout(
         await auth_service.logout(refresh_token)
 
     delete_refresh_token(response)
-
-
-@router.get(
-    "/me",
-    response_model=UserDetailResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Получение информации о пользователе",
-)
-async def read_users_me(
-    current_user: CurrentUser,
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    return await auth_service.get_user_with_game_renders(current_user.id)

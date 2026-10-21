@@ -24,11 +24,11 @@ router = APIRouter()
 )
 async def get_game_info(
     current_user: CurrentUser,
-    seed: int = Query(42, description="Сид для фиксации случайного генератора еды"),
+    seed: int = Query(..., description="Сид для фиксации случайного генератора еды"),
     service: GameRenderService = Depends(get_game_render_service),
 ):
 
-    return service.create_new_game(seed)
+    return service.get_info(seed)
 
 
 @router.post("/render", summary="Запуск игры")

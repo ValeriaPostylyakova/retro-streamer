@@ -23,6 +23,8 @@ class Leaderboard(Base):
     render_id: Mapped[UUID] = mapped_column(
         ForeignKey("game_renders.id", ondelete="SET NULL")
     )
+    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    season_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -34,6 +36,8 @@ class Leaderboard(Base):
         Index(
             "idx_leaderboard_game_name_score_created",
             "game_name",
+            "seed",
+            "season_id",
             score.desc(),
             created_at.desc(),
         ),

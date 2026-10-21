@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ class GameRenderRequest(BaseModel):
             "right",
         ],
     )
-    seed: int = 42
+    seed: int = 5
 
 
 class GameRules(BaseModel):
@@ -59,7 +59,10 @@ class GameRenderResponse(BaseModel):
 
 class GameRenderResponseCache(BaseModel):
     status: str = RenderStatus.SUCCESS
+    score: int
+    render_id: UUID
     download_url: str
+
     expires_in: int = 300
 
 
@@ -68,8 +71,15 @@ class GameRenderResponseProcessing(BaseModel):
     detail: str = "Обработка задачи с этими командами находится в процессе"
 
 
+class GameRenderResultDTO(BaseModel):
+    render_id: UUID
+    score: int
+    download_url: str
+
+
 class TaskStatusResponse(BaseResponse):
     task_id: str
     status: str
     progress: int
-    result_data: Any | None = None
+    result: GameRenderResultDTO | None = None
+    error: str | None = None

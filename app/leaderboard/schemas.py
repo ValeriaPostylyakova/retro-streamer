@@ -27,8 +27,9 @@ class LeaderboardResponse(BaseResponse):
     render: GameRenderNestedSchema
 
 
-class CreateLeaderboardRequest(BaseModel):
+class LeaderboardCreateDTO(BaseModel):
     user_id: UUID
     game_name: Literal["snake", "tetris", "pacman"] = "snake"
     score: int = Field(ge=0, le=100)
     render_id: UUID
+    seed: int

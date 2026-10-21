@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     S3_PUBLIC_BUCKET: str = Field(default="retro-streamer-public")
     S3_PRIVATE_BUCKET: str = Field(default="retro-streamer-private")
 
+    CURRENT_SEASON_ID: int = Field(default=0)
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
