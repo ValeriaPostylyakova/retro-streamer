@@ -1,3 +1,6 @@
+from uuid import UUID
+
+from app.leaderboard.models import Leaderboard
 from app.leaderboard.repositories import LeaderboardRepository
 from app.leaderboard.schemas import LeaderboardCreateDTO
 from app.schemas.common import LimitOffsetResponse
@@ -31,3 +34,8 @@ class LeaderboardService:
             game_name=dto.game_name,
             seed=dto.seed,
         )
+
+    async def get_user_render_leaderboard(
+        self, user_id: UUID, render_id: UUID
+    ) -> Leaderboard | None:
+        return await self.repository.get_unique_leaderboard(user_id, render_id)

@@ -63,3 +63,14 @@ class LeaderboardRepository:
 
         await self.session.execute(safe_stmt)
         await self.session.commit()
+
+    async def get_unique_leaderboard(
+        self, user_id: UUID, render_id: UUID
+    ) -> Leaderboard | None:
+
+        stmt = select(Leaderboard).where(
+            Leaderboard.user_id == user_id,
+            Leaderboard.render_id == render_id,
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

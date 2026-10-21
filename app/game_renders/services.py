@@ -3,6 +3,7 @@ import json
 from uuid import UUID
 
 from celery.result import AsyncResult
+from fastapi.responses import RedirectResponse
 from redis.asyncio import Redis
 
 from app.core.config import settings
@@ -114,7 +115,7 @@ class GameRenderService:
         )
 
         owner_key = RedisKeyManager.task_owner(task.id)
-        await self.redis_client.set(owner_key, str(user_id), ex=3600)
+        await self.redis_client.set(owner_key, str(user_id), ex=300)
 
         return GameRenderResponse(task_id=task.id, status=RenderStatus.PENDING)
 
@@ -177,3 +178,28 @@ class GameRenderService:
             result=result_data,
             error=error_message,
         )
+
+    async def download_file(self, render_id: UUID, user_id: UUID) -> RedirectResponse:
+        leaderboard_data = await self.leaderboard_service.get_user_render_leaderboard(
+            user_id, render_id
+        )
+
+        if not leaderboard_data:
+            raise ApplicationError(
+                detail="Файл не найден или у вас нет прав на его скачивание.",
+                status_code=404,
+            )
+
+        render_record = await self.repository.get_render_by_id(render_id)
+
+        if not render_record:
+            raise ApplicationError(
+                detail="Запись рендера не найдена в базе данных.",
+                status_code=404,
+            )
+
+        presigned_url = await self.s3_client.get_file_url(
+            object_name=render_record.s3_key, is_public=False
+        )
+
+        return RedirectResponse(url=presigned_url)
