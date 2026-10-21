@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from app.schemas.base import BaseResponse
 
 
-class GameRenderRequest(BaseModel):
+class SnakeRenderRequest(BaseModel):
     commands: list[str] = Field(
         ...,
         max_length=50,
@@ -21,22 +21,55 @@ class GameRenderRequest(BaseModel):
     seed: int = 5
 
 
-class GameRules(BaseModel):
+class TetrisRenderRequest(BaseModel):
+    commands: list[str] = Field(
+        ...,
+        max_length=80,
+        min_length=1,
+        examples=[
+            "left",
+            "right",
+            "rotate",
+            "drop",
+            "none",
+        ],
+    )
+    seed: int = 5
+
+
+class TetrisRules(BaseModel):
+    field_size: tuple[int, int]
+    max_commands: int = 80
+    available_commands: list[str] = ["left", "right", "rotate", "drop", "none"]
+
+
+class TetrisInitialState(BaseModel):
+    board: list[list[int]]
+
+
+class SnakeRules(BaseModel):
     field_size: int
-    max_commands: int
+    max_commands: int = 50
     opposite_directions: dict[str, str]
+    available_commands: list[str] = ["up", "down", "left", "right"]
 
 
-class GameInitialState(BaseModel):
+class SnakeInitialState(BaseModel):
     snake_body: list[list[int]]
     current_direction: str
     food_position: list[int]
 
 
-class GameInfoResponse(BaseModel):
+class SnakeInfoResponse(BaseModel):
     seed: int
-    rules: GameRules
-    initial_state: GameInitialState
+    rules: SnakeRules
+    initial_state: SnakeInitialState
+
+
+class TetrisInfoResponse(BaseModel):
+    seed: int
+    rules: TetrisRules
+    initial_state: TetrisInitialState
 
 
 class GameRenderList(BaseModel):

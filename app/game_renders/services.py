@@ -1,5 +1,6 @@
 import hashlib
 import json
+import random
 from uuid import UUID
 
 from celery.result import AsyncResult
@@ -11,17 +12,21 @@ from app.core.exceptions import ApplicationError
 from app.core.s3_client import S3AsyncService
 from app.game_renders.cache_keys import RedisKeyManager
 from app.game_renders.games.snake_game import SnakeGame
+from app.game_renders.games.tetris_game import TetrisGame
 from app.game_renders.repositories import GameRenderRepository
 from app.game_renders.schemas import (
-    GameInfoResponse,
-    GameInitialState,
-    GameRenderRequest,
     GameRenderResponse,
     GameRenderResponseCache,
     GameRenderResultDTO,
-    GameRules,
     RenderStatus,
+    SnakeInfoResponse,
+    SnakeInitialState,
+    SnakeRenderRequest,
+    SnakeRules,
     TaskStatusResponse,
+    TetrisInfoResponse,
+    TetrisInitialState,
+    TetrisRules,
 )
 from app.game_renders.tasks.generate_game_gif import generate_game_gif
 from app.leaderboard.schemas import LeaderboardCreateDTO
@@ -43,13 +48,15 @@ class GameRenderService:
 
     def _generate_idempotency_hash(
         self,
-        request_data: GameRenderRequest,
+        request_data: SnakeRenderRequest,
     ) -> str:
         commands_str = ",".join(request_data.commands)
         raw_string = f"{request_data.seed}:{commands_str}:{settings.CURRENT_SEASON_ID}"
         return hashlib.md5(raw_string.encode("utf-8")).hexdigest()
 
-    async def process_game_render(self, user_id: UUID, request_data: GameRenderRequest):
+    async def process_game_render(
+        self, user_id: UUID, request_data: SnakeRenderRequest
+    ):
         hash_key = self._generate_idempotency_hash(request_data)
         key = RedisKeyManager.game_cache(hash_key)
 
@@ -120,21 +127,34 @@ class GameRenderService:
         return GameRenderResponse(task_id=task.id, status=RenderStatus.PENDING)
 
     @staticmethod
-    def get_info(seed: int) -> GameInfoResponse:
+    def get_info_snake(seed: int) -> SnakeInfoResponse:
+        random.seed(seed)
         game = SnakeGame()
 
-        return GameInfoResponse(
+        return SnakeInfoResponse(
             seed=seed,
-            rules=GameRules(
+            rules=SnakeRules(
                 field_size=game.SIZE,
-                max_commands=50,
                 opposite_directions=game.OPPOSITE,
             ),
-            initial_state=GameInitialState(
+            initial_state=SnakeInitialState(
                 snake_body=[list(cell) for cell in game.snake],
                 current_direction=game.direction,
                 food_position=list(game.food) if game.food else [],
             ),
+        )
+
+    @staticmethod
+    def get_info_tetris(seed: int) -> TetrisInfoResponse:
+        random.seed(seed)
+        game = TetrisGame()
+
+        return TetrisInfoResponse(
+            seed=seed,
+            rules=TetrisRules(
+                field_size=(game.HEIGHT, game.WIDTH),
+            ),
+            initial_state=TetrisInitialState(board=game._get_board()),
         )
 
     async def get_status_task(self, task_id: str, user_id: UUID) -> TaskStatusResponse:

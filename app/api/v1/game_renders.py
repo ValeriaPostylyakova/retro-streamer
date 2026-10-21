@@ -5,11 +5,13 @@ from fastapi.responses import RedirectResponse
 
 from app.auth.dependencies import CurrentUser
 from app.dependencies.rate_limiter import role_rate_limiter
+from app.enums import AllowedSeeds
 from app.game_renders.dependencies import get_game_render_service
 from app.game_renders.schemas import (
-    GameInfoResponse,
-    GameRenderRequest,
+    SnakeInfoResponse,
+    SnakeRenderRequest,
     TaskStatusResponse,
+    TetrisInfoResponse,
 )
 from app.game_renders.services import GameRenderService
 
@@ -17,26 +19,42 @@ router = APIRouter()
 
 
 @router.get(
-    "/info/{game_name}",
-    summary="Получение информации о начальном положении игры",
+    "/info/snake",
+    summary="Получение информации о начальном положении игры snake",
     description="Возвращает информацию о начальном положении игры в зависимости от параметра seed.",
     status_code=status.HTTP_200_OK,
-    response_model=GameInfoResponse,
+    response_model=SnakeInfoResponse,
 )
 async def get_game_info(
     current_user: CurrentUser,
-    game_name: str,
-    seed: int = Query(..., description="Сид для фиксации случайного генератора еды"),
+    seed: AllowedSeeds = Query(
+        ..., description="Сид для фиксации случайного генератора еды"
+    ),
     service: GameRenderService = Depends(get_game_render_service),
 ):
 
-    return service.get_info(seed)
+    return service.get_info_snake(seed.value)
+
+
+@router.get(
+    "/info/tetris",
+    summary="Получение информации о начальном положении игры tetris",
+    description="Возвращает информацию о начальном положении игры в зависимости от параметра seed.",
+    status_code=status.HTTP_200_OK,
+    response_model=TetrisInfoResponse,
+)
+async def get_tetris_game_info(
+    current_user: CurrentUser,
+    seed: AllowedSeeds = Query(..., description="Сид для фиксации генератора фигур"),
+    service: GameRenderService = Depends(get_game_render_service),
+):
+    return service.get_info_tetris(seed.value)
 
 
 @router.post("/render", summary="Запуск игры")
 async def play_game_and_get_gif(
     current_user: CurrentUser,
-    request_data: GameRenderRequest,
+    request_data: SnakeRenderRequest,
     _=Depends(role_rate_limiter()),
     service: GameRenderService = Depends(get_game_render_service),
 ):
