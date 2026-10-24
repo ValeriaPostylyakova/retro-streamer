@@ -1,6 +1,6 @@
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -9,7 +9,7 @@ from fastapi import HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
-from pydantic import Field
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,7 +54,7 @@ def verify_password(
 def create_access_token(
     user_id: UUID,
 ) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     payload = {
         "sub": str(user_id),
@@ -133,3 +133,17 @@ def delete_refresh_token(response: Response):
         secure=True,
         samesite="lax",
     )
+
+
+async def get_current_user_ws(token: str) -> UUID:
+    try:
+        payload = decode_access_token(token)
+
+        user_id_str = payload.get("sub")
+        return UUID(user_id_str)
+
+    except (InvalidTokenError, ValidationError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )

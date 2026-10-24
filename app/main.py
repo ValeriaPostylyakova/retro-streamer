@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import (
+    FastAPI,
+    Request,
+)
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 import app.models
@@ -21,6 +25,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="fastapi_task_manager", lifespan=lifespan, debug=settings.DEBUG)
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+origins = [
+    "http://localhost:8000",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(ApplicationError)

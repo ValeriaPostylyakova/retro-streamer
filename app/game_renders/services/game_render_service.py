@@ -76,11 +76,8 @@ class GameRenderService:
 
             await self.leaderboard_service.save_leaderboard_record(leaderboard_dto)
 
-            s3_download_url = await self.s3_client.get_file_url(
-                cache_data["s3_key"], is_public=False
-            )
             return GameRenderResponseCache(
-                download_url=s3_download_url,
+                download_url=cache_data["download_url"],
                 score=cache_data["score"],
                 render_id=UUID(cache_data["render_id"]),
             )
@@ -120,7 +117,7 @@ class GameRenderService:
             seed=request_data.seed,
             commands=request_data.commands,
             hash_key=hash_key,
-            user_id=user_id,
+            user_id=str(user_id),
         )
 
         owner_key = RedisKeyManager.task_owner(task.id)
@@ -181,14 +178,10 @@ class GameRenderService:
             progress = 100
             result_data = async_result.result
 
-            s3_download_url = await self.s3_client.get_file_url(
-                result_data["s3_key"], is_public=False
-            )
-
             result_data = GameRenderResultDTO(
                 render_id=UUID(result_data["render_id"]),
                 score=result_data["score"],
-                download_url=s3_download_url,
+                download_url=result_data["download_url"],
             )
         elif state == RenderStatus.FAILED:
             error_message = str(async_result.result)

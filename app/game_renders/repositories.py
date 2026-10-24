@@ -15,7 +15,7 @@ class GameRenderRepository:
     ) -> GameRender | None:
         stmt = select(GameRender).where(GameRender.commands_hash == commands_hash)
         result = await self.db_session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def get_render_by_id(self, render_id: UUID) -> GameRender | None:
         stmt = select(GameRender).where(GameRender.id == render_id)

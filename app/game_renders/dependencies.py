@@ -11,6 +11,7 @@ from app.game_renders.repositories import (
     GameRenderRepository,
 )
 from app.game_renders.services import GameRenderService
+from app.game_renders.services.websocket_service import GameRenderWebSocketService
 from app.leaderboard.dependencies import (
     get_leaderboard_service,
 )
@@ -34,4 +35,14 @@ async def get_game_render_service(
         s3_client=s3_client,
         repository=repository,
         leaderboard_service=leaderboard_service,
+    )
+
+
+async def get_game_render_websocket_service(
+    redis_client: Redis = Depends(get_async_redis_client),
+    game_render_service: GameRenderService = Depends(get_game_render_service),
+) -> GameRenderWebSocketService:
+    return GameRenderWebSocketService(
+        redis_client=redis_client,
+        render_service=game_render_service,
     )
