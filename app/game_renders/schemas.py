@@ -119,6 +119,6 @@ class GameRenderResultDTO(BaseModel):
 class TaskStatusResponse(BaseResponse):
     task_id: str
     status: str
-    progress: int
+    progress: int | None = None
     result: GameRenderResultDTO | None = None
     error: str | None = None

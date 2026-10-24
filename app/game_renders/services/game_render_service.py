@@ -168,28 +168,22 @@ class GameRenderService:
             )
 
         state = async_result.state
-        progress = 0
         result_data = None
         error_message = None
 
-        if state in (RenderStatus.PROGRESS, RenderStatus.PROCESSING):
-            progress = async_result.info.get("progress", 0) if async_result.info else 0
-        elif state == RenderStatus.SUCCESS:
-            progress = 100
-            result_data = async_result.result
-
+        if state == RenderStatus.SUCCESS:
+            raw_result = async_result.result
             result_data = GameRenderResultDTO(
-                render_id=UUID(result_data["render_id"]),
-                score=result_data["score"],
-                download_url=result_data["download_url"],
+                render_id=UUID(raw_result["render_id"]),
+                score=raw_result["score"],
+                download_url=raw_result["download_url"],
             )
         elif state == RenderStatus.FAILED:
-            error_message = str(async_result.result)
+            error_message = str(result_data)
 
         return TaskStatusResponse(
             task_id=task_id,
             status=state,
-            progress=progress,
             result=result_data,
             error=error_message,
         )
