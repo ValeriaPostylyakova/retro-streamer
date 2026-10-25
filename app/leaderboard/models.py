@@ -20,6 +20,7 @@ class Leaderboard(Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     game_name: Mapped[str] = mapped_column(String(50), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
+    steps_count: Mapped[int] = mapped_column(Integer, nullable=True)
     render_id: Mapped[UUID] = mapped_column(
         ForeignKey("game_renders.id", ondelete="SET NULL")
     )
@@ -39,6 +40,7 @@ class Leaderboard(Base):
             "seed",
             "season_id",
             score.desc(),
+            steps_count.desc(),
             created_at.desc(),
         ),
         Index("idx_leaderboard_render_id", "render_id"),

@@ -70,6 +70,7 @@ class GameRenderService:
                 user_id=user_id,
                 render_id=UUID(cache_data["render_id"]),
                 score=cache_data["score"],
+                steps_count=cache_data["steps_count"],
                 game_name=request_data.game_name,
                 seed=request_data.seed,
             )
@@ -79,6 +80,7 @@ class GameRenderService:
             return GameRenderResponseCache(
                 download_url=cache_data["download_url"],
                 score=cache_data["score"],
+                steps_count=cache_data["steps_count"],
                 render_id=UUID(cache_data["render_id"]),
             )
 
@@ -86,30 +88,37 @@ class GameRenderService:
             commands_hash=hash_key
         )
         if db_record:
-            cache_data = {
-                "s3_key": db_record.s3_key,
-                "render_id": str(db_record.id),
-                "score": db_record.score,
-            }
-            await self.redis_client.set(key, json.dumps(cache_data), ex=86400)
+            s3_download_url = await self.s3_client.get_file_url(
+                db_record.s3_key, is_public=False
+            )
+
+            cache_data = GameRenderResultDTO(
+                render_id=db_record.id,
+                score=db_record.score,
+                steps_count=db_record.steps_count,
+                download_url=s3_download_url,
+            )
+
+            await self.redis_client.set(
+                key, json.dumps(cache_data.model_dump_json()), ex=86400
+            )
 
             leaderboard_dto = LeaderboardCreateDTO(
                 user_id=user_id,
-                render_id=UUID(cache_data["render_id"]),
-                score=cache_data["score"],
+                render_id=db_record.id,
+                score=db_record.score,
+                steps_count=db_record.steps_count,
                 game_name=request_data.game_name,
                 seed=request_data.seed,
             )
 
             await self.leaderboard_service.save_leaderboard_record(dto=leaderboard_dto)
 
-            s3_download_url = await self.s3_client.get_file_url(
-                db_record.s3_key, is_public=False
-            )
             return GameRenderResponseCache(
                 download_url=s3_download_url,
-                score=cache_data["score"],
-                render_id=UUID(cache_data["render_id"]),
+                score=db_record.score,
+                steps_count=db_record.steps_count,
+                render_id=db_record.id,
             )
 
         task = generate_game_gif.delay(
@@ -176,6 +185,7 @@ class GameRenderService:
             result_data = GameRenderResultDTO(
                 render_id=UUID(raw_result["render_id"]),
                 score=raw_result["score"],
+                steps_count=raw_result["steps_count"],
                 download_url=raw_result["download_url"],
             )
         elif state == RenderStatus.FAILED:

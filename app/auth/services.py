@@ -7,9 +7,9 @@ from app.auth.schemas import (
     LoginRequest,
     RegisterRequest,
 )
+from app.core.config import settings
 from app.core.exceptions import ApplicationError
 from app.core.security import (
-    REFRESH_TOKEN_DAYS,
     create_access_token,
     create_refresh_token,
     hash_password,
@@ -29,7 +29,7 @@ class AuthService:
         user_session = UserSession(
             user_id=user_id,
             refresh_token_hash=hash_refresh_token(refresh_token),
-            expires_at=now + timedelta(days=REFRESH_TOKEN_DAYS),
+            expires_at=now + timedelta(days=settings.REFRESH_TOKEN_DAYS),
         )
         await self.repository.create_user_session(user_session)
 

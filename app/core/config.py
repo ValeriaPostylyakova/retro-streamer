@@ -28,6 +28,15 @@ class Settings(BaseSettings):
 
     CURRENT_SEASON_ID: int = Field(default=0)
 
+    JWT_SECRET_KEY: str = Field(default="super_secret_key_12345")
+    JWT_ISSUER: str = Field(default="my-api")
+    JWT_AUDIENCE: str = Field(default="my-frontend")
+    COOKIE_SECURE: bool = Field(default=False)
+    COOKIE_SAMESITE: str = Field(default="lax")
+
+    ACCESS_TOKEN_MINUTES: int = 10
+    REFRESH_TOKEN_DAYS: int = 7
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

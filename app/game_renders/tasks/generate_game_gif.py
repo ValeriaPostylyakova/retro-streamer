@@ -1,7 +1,6 @@
 import io
 import logging
 import random
-import time
 from uuid import UUID
 
 import imageio
@@ -83,15 +82,19 @@ def generate_game_gif(
 
     frames = []
     initial_board = game._get_board()
-    frames.append(render_board_to_image(initial_board, game_name=game_name))
+
+    frames.append(
+        render_board_to_image(initial_board, game_name=game_name, draw_game_over=False)
+    )
 
     total_commands = len(commands)
     for idx, command in enumerate(commands, start=1):
-        time.sleep(2)
-
         try:
             board = game.step(command.lower())
-            frames.append(render_board_to_image(board, game_name=game_name))
+
+            frames.append(
+                render_board_to_image(board, game_name=game_name, draw_game_over=False)
+            )
 
             send_progress(
                 task_id,
@@ -125,6 +128,20 @@ def generate_game_gif(
         )
         return ""
 
+    if game_name == "snake" and game.game_over:
+        final_board = game._get_board()
+
+        dead_frame = render_board_to_image(
+            final_board, game_name=game_name, draw_game_over=False
+        )
+        frames.append(dead_frame)
+
+        game_over_frame = render_board_to_image(
+            final_board, game_name=game_name, draw_game_over=True, score=int(game.score)
+        )
+        for _ in range(4):
+            frames.append(game_over_frame)
+
     with io.BytesIO() as gif_io:
         imageio.mimsave(gif_io, frames, format="GIF", fps=5, loop=0)
         gif_bytes = gif_io.getvalue()
@@ -140,11 +157,14 @@ def generate_game_gif(
         download_url = s3_client.get_file_url(object_name, is_public=False)
         score = int(game.score)
 
+        steps_count = getattr(game, "steps_count", len(commands))
+
         with get_sync_session() as session:
             new_render = GameRender(
                 game_name=game_name,
                 seed=seed,
                 score=int(score),
+                steps_count=int(steps_count),
                 season_id=settings.CURRENT_SEASON_ID,
                 commands_hash=hash_key,
                 s3_key=object_name,
@@ -156,6 +176,7 @@ def generate_game_gif(
                 user_id=user_id,
                 game_name=game_name,
                 score=int(score),
+                steps_count=int(steps_count),
                 render_id=new_render.id,
                 season_id=settings.CURRENT_SEASON_ID,
                 seed=seed,
@@ -171,6 +192,7 @@ def generate_game_gif(
             cache_data = GameRenderResultDTO(
                 render_id=new_render.id,
                 score=int(score),
+                steps_count=int(steps_count),
                 download_url=download_url,
             )
 
@@ -178,12 +200,13 @@ def generate_game_gif(
 
             logger.info(
                 f"[{game_name.upper()}] Game render and high score saved to database. "
-                f"Render: {object_name}, Score: {score}"
+                f"Render: {object_name}, Score: {score}, Steps: {steps_count}"
             )
 
         result = GameRenderResultDTO(
             render_id=new_render.id,
-            score=score,
+            score=int(score),
+            steps_count=int(steps_count),
             download_url=download_url,
         )
 

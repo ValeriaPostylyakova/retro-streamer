@@ -99,6 +99,7 @@ class GameRenderResponse(BaseModel):
 class GameRenderResponseCache(BaseModel):
     status: str = RenderStatus.SUCCESS
     score: int
+    steps_count: int
     render_id: UUID
     download_url: str
 
@@ -113,6 +114,7 @@ class GameRenderResponseProcessing(BaseModel):
 class GameRenderResultDTO(BaseModel):
     render_id: UUID
     score: int
+    steps_count: int
     download_url: str
 
 

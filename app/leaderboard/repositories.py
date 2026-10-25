@@ -25,22 +25,47 @@ class LeaderboardRepository:
             GameRender.season_id == season_id,
         ]
 
+        rn_column = (
+            func.row_number()
+            .over(
+                partition_by=Leaderboard.user_id,
+                order_by=[
+                    Leaderboard.score.desc(),
+                    Leaderboard.steps_count.asc(),
+                    Leaderboard.created_at.desc(),
+                ],
+            )
+            .label("rn")
+        )
+
+        best_records_subquery = (
+            select(Leaderboard.id.label("leaderboard_id"), rn_column)
+            .where(*where_clauses)
+            .subquery()
+        )
+
         stmt = (
             select(Leaderboard)
-            .join(Leaderboard.render)
-            .options(joinedload(Leaderboard.user), joinedload(Leaderboard.render))
-            .where(*where_clauses)
-            .order_by(Leaderboard.score.desc(), Leaderboard.created_at.desc())
+            .options(joinedload(Leaderboard.user))
+            .join(
+                best_records_subquery,
+                Leaderboard.id == best_records_subquery.c.leaderboard_id,
+            )
+            .where(best_records_subquery.c.rn == 1)
+            .order_by(
+                Leaderboard.score.desc(),
+                Leaderboard.steps_count.asc(),
+                Leaderboard.created_at.desc(),
+            )
             .offset(offset)
             .limit(limit)
         )
+
         result = await self.session.execute(stmt)
         records = result.scalars().unique().all()
 
-        count_stmt = (
-            select(func.count(Leaderboard.id))
-            .join(Leaderboard.render)
-            .where(*where_clauses)
+        count_stmt = select(func.count(func.distinct(Leaderboard.user_id))).where(
+            *where_clauses
         )
         total = await self.session.scalar(count_stmt) or 0
 
