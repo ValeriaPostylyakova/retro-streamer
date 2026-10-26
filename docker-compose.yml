@@ -34,14 +34,11 @@ services:
     <<: *fastapi-common
     command: watchfiles --filter python "celery -A app.core.celery_app worker --loglevel=info"
 
-  # НОВЫЙ СЕРВИС: Flower для мониторинга Celery
   flower:
     <<: *fastapi-common
     ports:
       - "5555:5555"
-    # Указываем тот же путь к приложению app.core.celery_app, что и у воркера
     command: celery -A app.core.celery_app flower --port=5555
-    # Зависит от воркера, чтобы запускаться, когда всё готово
     depends_on:
       celery_worker:
         condition: service_started

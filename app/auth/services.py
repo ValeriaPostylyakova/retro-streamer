@@ -81,7 +81,7 @@ class AuthService:
 
     async def rotate_refresh_token(self, refresh_token: str) -> tuple[str, str]:
         now = datetime.now(UTC)
-        expires_at = now + timedelta(days=REFRESH_TOKEN_DAYS)
+        expires_at = now + timedelta(days=settings.REFRESH_TOKEN_DAYS)
 
         new_refresh_token = create_refresh_token()
 
