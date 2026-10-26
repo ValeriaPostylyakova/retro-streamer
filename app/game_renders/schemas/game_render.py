@@ -49,6 +49,13 @@ class GameInfoResponse(RootModel[GameInfoUnion]):
     pass
 
 
+class AllowedGames(str, Enum):
+    snake = "snake"
+    game_2048 = "2048"
+    labyrinth = "labyrinth"
+    sokoban = "sokoban"
+
+
 class RenderStatus(str, Enum):
     SUCCESS = "SUCCESS"
     PENDING = "PENDING"

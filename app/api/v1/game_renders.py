@@ -1,4 +1,3 @@
-from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Query, status
@@ -7,7 +6,12 @@ from fastapi.responses import RedirectResponse
 from app.auth.dependencies import CurrentUser
 from app.dependencies.rate_limiter import role_rate_limiter
 from app.game_renders.dependencies import get_game_render_service
-from app.game_renders.schemas import GameInfoResponse, RenderRequest, TaskStatusResponse
+from app.game_renders.schemas import (
+    AllowedGames,
+    GameInfoResponse,
+    RenderRequest,
+    TaskStatusResponse,
+)
 from app.game_renders.services import GameRenderService
 
 router = APIRouter()
@@ -22,9 +26,7 @@ router = APIRouter()
 )
 async def get_game_info_dynamic(
     current_user: CurrentUser,
-    game_name: Literal["snake", "sokoban", "2048", "labyrinth"] = Path(
-        ..., description="Идентификатор игры"
-    ),
+    game_name: AllowedGames = Path(..., description="Идентификатор игры"),
     seed: int = Query(..., description="Сид для фиксации случайного генератора"),
     service: GameRenderService = Depends(get_game_render_service),
 ):

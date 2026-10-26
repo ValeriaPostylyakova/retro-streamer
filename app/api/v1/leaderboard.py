@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.dependencies import CurrentUser
-from app.enums import AllowedGames, AllowedSeeds
+from app.game_renders.schemas import AllowedGames
 from app.leaderboard.dependencies import get_leaderboard_service
 from app.leaderboard.schemas import LeaderboardResponse
 from app.leaderboard.services import LeaderboardService
@@ -20,7 +20,7 @@ async def get_top_leaderboard(
     current_user: CurrentUser,
     game_name: AllowedGames,
     season_id: int = Query(..., description="ID текущего сезона"),
-    seed: AllowedSeeds = Query(..., description="Сид генерации уровня"),
+    seed: int = Query(..., description="Сид генерации уровня"),
     leaderboard_service: LeaderboardService = Depends(get_leaderboard_service),
     limit: int = Query(
         default=20, ge=1, le=100, description="Количество возвращаемых объектов"
