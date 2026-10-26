@@ -11,23 +11,31 @@ from app.core.config import settings
 from app.core.exceptions import ApplicationError
 from app.core.s3_client import S3AsyncService
 from app.game_renders.cache_keys import RedisKeyManager
+from app.game_renders.games.game_2048 import Game2048
+from app.game_renders.games.labyrinth_game import LabyrinthGame
 from app.game_renders.games.snake_game import SnakeGame
-from app.game_renders.games.tetris_game import TetrisGame
+from app.game_renders.games.sokoban_game import SokobanGame
 from app.game_renders.repositories import GameRenderRepository
 from app.game_renders.schemas import (
+    Game2048InfoResponse,
+    Game2048InitialState,
+    Game2048Rules,
+    GameInfoUnion,
     GameRenderResponse,
     GameRenderResponseCache,
     GameRenderResultDTO,
+    GameRequestUnion,
+    LabyrinthInfoResponse,
+    LabyrinthInitialState,
+    LabyrinthRules,
     RenderStatus,
     SnakeInfoResponse,
     SnakeInitialState,
-    SnakeRenderRequest,
     SnakeRules,
+    SokobanInfoResponse,
+    SokobanInitialState,
+    SokobanRules,
     TaskStatusResponse,
-    TetrisInfoResponse,
-    TetrisInitialState,
-    TetrisRenderRequest,
-    TetrisRules,
 )
 from app.game_renders.tasks.generate_game_gif import generate_game_gif
 from app.leaderboard.schemas import LeaderboardCreateDTO
@@ -49,15 +57,13 @@ class GameRenderService:
 
     def _generate_idempotency_hash(
         self,
-        request_data,
+        request_data: GameRequestUnion,
     ) -> str:
         commands_str = ",".join(request_data.commands)
-        raw_string = f"{request_data.seed}:{commands_str}:{settings.CURRENT_SEASON_ID}"
+        raw_string = f"{request_data.game_name}:{request_data.seed}:{commands_str}:{settings.CURRENT_SEASON_ID}"
         return hashlib.md5(raw_string.encode("utf-8")).hexdigest()
 
-    async def process_game_render(
-        self, user_id: UUID, request_data: SnakeRenderRequest | TetrisRenderRequest
-    ):
+    async def process_game_render(self, user_id: UUID, request_data: GameRequestUnion):
         hash_key = self._generate_idempotency_hash(request_data)
         key = RedisKeyManager.game_cache(hash_key)
 
@@ -126,7 +132,7 @@ class GameRenderService:
             seed=request_data.seed,
             commands=request_data.commands,
             hash_key=hash_key,
-            user_id=str(user_id),
+            user_id=user_id,
         )
 
         owner_key = RedisKeyManager.task_owner(task.id)
@@ -135,35 +141,77 @@ class GameRenderService:
         return GameRenderResponse(task_id=task.id, status=RenderStatus.PENDING)
 
     @staticmethod
-    def get_info_snake(seed: int) -> SnakeInfoResponse:
+    def get_game_info(game_name: str, seed: int) -> GameInfoUnion:
         random.seed(seed)
-        game = SnakeGame()
 
-        return SnakeInfoResponse(
-            seed=seed,
-            rules=SnakeRules(
-                field_size=game.SIZE,
-                opposite_directions=game.OPPOSITE,
-            ),
-            initial_state=SnakeInitialState(
-                snake_body=[list(cell) for cell in game.snake],
-                current_direction=game.direction,
-                food_position=list(game.food) if game.food else [],
-            ),
-        )
+        match game_name:
+            case "snake":
+                game = SnakeGame()
+                return SnakeInfoResponse(
+                    seed=seed,
+                    rules=SnakeRules(
+                        field_size=game.SIZE,
+                        max_commands=250,
+                        opposite_directions=game.OPPOSITE,
+                        available_commands=list(game.DIRECTIONS.keys()),
+                    ),
+                    initial_state=SnakeInitialState(
+                        snake_body=[list(cell) for cell in game.snake],
+                        current_direction=game.direction,
+                        food_position=list(game.food) if game.food else [],
+                    ),
+                )
 
-    @staticmethod
-    def get_info_tetris(seed: int) -> TetrisInfoResponse:
-        random.seed(seed)
-        game = TetrisGame()
+            case "sokoban":
+                game = SokobanGame()
+                return SokobanInfoResponse(
+                    seed=seed,
+                    rules=SokobanRules(
+                        field_size=game.SIZE,
+                        max_commands=150,
+                        available_commands=list(game.DIRECTIONS.keys()),
+                    ),
+                    initial_state=SokobanInitialState(
+                        board=game._get_board(),
+                        player_position=list(game.player),
+                        boxes_positions=[list(b) for b in game.boxes],
+                        targets_positions=[list(t) for t in game.targets],
+                    ),
+                )
 
-        return TetrisInfoResponse(
-            seed=seed,
-            rules=TetrisRules(
-                field_size=(game.HEIGHT, game.WIDTH),
-            ),
-            initial_state=TetrisInitialState(board=game._get_board()),
-        )
+            case "2048":
+                game = Game2048()
+                return Game2048InfoResponse(
+                    seed=seed,
+                    rules=Game2048Rules(
+                        field_size=game.SIZE,
+                        max_commands=500,
+                        available_commands=list(game.DIRECTIONS.keys()),
+                    ),
+                    initial_state=Game2048InitialState(
+                        board=game._get_board(),
+                    ),
+                )
+
+            case "labyrinth":
+                game = LabyrinthGame()
+                return LabyrinthInfoResponse(
+                    seed=seed,
+                    rules=LabyrinthRules(
+                        field_size=game.SIZE,
+                        max_commands=150,
+                        available_commands=list(game.DIRECTIONS.keys()),
+                    ),
+                    initial_state=LabyrinthInitialState(
+                        board=game._get_board(),
+                        player_position=list(game.player),
+                        enemies_positions=[list(e) for e in game.enemies],
+                        coins_positions=[list(c) for c in game.coins],
+                    ),
+                )
+
+            case _:
+                raise ValueError(f"Неизвестная игра: {game_name}")
 
     async def get_status_task(self, task_id: str, user_id: UUID) -> TaskStatusResponse:
         async_result = AsyncResult(task_id)

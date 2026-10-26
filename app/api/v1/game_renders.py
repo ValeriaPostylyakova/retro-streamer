@@ -1,77 +1,47 @@
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from fastapi.responses import RedirectResponse
 
 from app.auth.dependencies import CurrentUser
 from app.dependencies.rate_limiter import role_rate_limiter
-from app.enums import AllowedSeeds
 from app.game_renders.dependencies import get_game_render_service
-from app.game_renders.schemas import (
-    SnakeInfoResponse,
-    SnakeRenderRequest,
-    TaskStatusResponse,
-    TetrisInfoResponse,
-    TetrisRenderRequest,
-)
+from app.game_renders.schemas import GameInfoResponse, RenderRequest, TaskStatusResponse
 from app.game_renders.services import GameRenderService
 
 router = APIRouter()
 
 
 @router.get(
-    "/info/snake",
-    summary="Получение информации о начальном положении игры snake",
-    description="Возвращает информацию о начальном положении игры в зависимости от параметра seed.",
+    "/info/{game_name}",
+    summary="Получение информации о начальном положении выбранной игры",
+    description="Возвращает метаданные, правила и начальное состояние выбранной игры в зависимости от seed.",
     status_code=status.HTTP_200_OK,
-    response_model=SnakeInfoResponse,
+    response_model=GameInfoResponse,
 )
-async def get_game_info(
+async def get_game_info_dynamic(
     current_user: CurrentUser,
-    seed: AllowedSeeds = Query(
-        ..., description="Сид для фиксации случайного генератора еды"
+    game_name: Literal["snake", "sokoban", "2048", "labyrinth"] = Path(
+        ..., description="Идентификатор игры"
     ),
+    seed: int = Query(..., description="Сид для фиксации случайного генератора"),
     service: GameRenderService = Depends(get_game_render_service),
 ):
+    return service.get_game_info(game_name, seed)
 
-    return service.get_info_snake(seed.value)
 
-
-@router.get(
-    "/info/tetris",
-    summary="Получение информации о начальном положении игры tetris",
-    description="Возвращает информацию о начальном положении игры в зависимости от параметра seed.",
-    status_code=status.HTTP_200_OK,
-    response_model=TetrisInfoResponse,
-)
-async def get_tetris_game_info(
+@router.post("/render", summary="Запуск рендеринга любой игры")
+async def play_game_dynamic(
     current_user: CurrentUser,
-    seed: AllowedSeeds = Query(..., description="Сид для фиксации генератора фигур"),
-    service: GameRenderService = Depends(get_game_render_service),
-):
-    return service.get_info_tetris(seed.value)
-
-
-@router.post("/render/snake", summary="Запуск игры")
-async def play_game_snake(
-    current_user: CurrentUser,
-    request_data: SnakeRenderRequest,
+    request_data: RenderRequest,
     _=Depends(role_rate_limiter()),
     service: GameRenderService = Depends(get_game_render_service),
 ):
 
-    return await service.process_game_render(current_user.id, request_data)
+    actual_game_request = request_data.root
 
-
-@router.post("/render/tetris", summary="Запуск игры")
-async def play_game_tetris(
-    current_user: CurrentUser,
-    request_data: TetrisRenderRequest,
-    _=Depends(role_rate_limiter()),
-    service: GameRenderService = Depends(get_game_render_service),
-):
-
-    return await service.process_game_render(current_user.id, request_data)
+    return await service.process_game_render(current_user.id, actual_game_request)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskStatusResponse)

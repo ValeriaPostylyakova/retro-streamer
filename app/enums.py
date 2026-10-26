@@ -2,7 +2,6 @@ from enum import Enum, IntEnum
 
 
 class AllowedGames(str, Enum):
-    tetris = "tetris"
     snake = "snake"
 
 

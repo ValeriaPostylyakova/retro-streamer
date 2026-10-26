@@ -1,25 +1,18 @@
-import io
 import logging
 import random
 from uuid import UUID
 
-import imageio
 from celery.exceptions import Ignore
-from sqlalchemy.dialects.postgresql import insert
 
 from app.core.celery_app import celery_app
-from app.core.config import settings
-from app.core.database import get_sync_session
 from app.core.redis_client import get_sync_redis_client
 from app.core.s3_client import get_s3_sync_client
 from app.game_renders.cache_keys import RedisKeyManager
-from app.game_renders.games.snake_game import SnakeGame
-from app.game_renders.games.tetris_game import TetrisGame
-from app.game_renders.models import GameRender
+from app.game_renders.factory import GameEngineFactory
+from app.game_renders.repositories import GameRenderRepository
 from app.game_renders.schemas import GameRenderResultDTO, RenderStatus
-from app.game_renders.utils.render_board_to_image import render_board_to_image
+from app.game_renders.utils import create_gif_bytes
 from app.game_renders.utils.send_progress_task import send_progress
-from app.leaderboard.models import Leaderboard
 
 logger = logging.getLogger(__name__)
 
@@ -31,70 +24,37 @@ logger = logging.getLogger(__name__)
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def generate_game_gif(
-    self,
-    game_name: str,
-    seed: int,
-    commands: list,
-    hash_key: str,
-    user_id: UUID,
+    self, game_name: str, seed: int, commands: list, hash_key: str, user_id: UUID
 ):
     random.seed(seed)
-
     task_id = self.request.id
     channel_name = RedisKeyManager.game_render_progress(task_id)
-    redis_client = get_sync_redis_client()
     cache_key = RedisKeyManager.game_cache(hash_key)
+    redis_client = get_sync_redis_client()
 
-    existing_cache = redis_client.get(cache_key)
-    if existing_cache:
-        logger.info(
-            f"Task {task_id} found existing cache for hash {hash_key}. Skipping execution."
+    try:
+        engine = GameEngineFactory.get_engine(game_name, seed)
+    except ValueError as e:
+        send_progress(
+            task_id, channel_name=channel_name, status=RenderStatus.FAILED, error=str(e)
         )
-        try:
-            cached_dto = GameRenderResultDTO.model_validate_json(existing_cache)
-            send_progress(
-                task_id,
-                channel_name,
-                RenderStatus.SUCCESS,
-                current_step=1,
-                total_steps=1,
-                result=cached_dto,
-            )
-            return cached_dto.model_dump(mode="json")
-        except Exception:
-            pass
+        raise
 
     send_progress(
-        task_id=task_id,
-        channel_name=channel_name,
-        status=RenderStatus.PROCESSING,
+        task_id,
+        channel_name,
+        RenderStatus.PROCESSING,
         current_step=0,
         total_steps=len(commands),
     )
 
-    if game_name == "snake":
-        game = SnakeGame()
-    elif game_name == "tetris":
-        game = TetrisGame()
-    else:
-        send_progress(task_id, channel_name=channel_name, status=RenderStatus.FAILED)
-        raise ValueError(f"Unknown game name: {game_name}")
-
-    frames = []
-    initial_board = game._get_board()
-
-    frames.append(
-        render_board_to_image(initial_board, game_name=game_name, draw_game_over=False)
-    )
-
+    frames = engine.get_initial_frames()
     total_commands = len(commands)
+
     for idx, command in enumerate(commands, start=1):
         try:
-            board = game.step(command.lower())
-
-            frames.append(
-                render_board_to_image(board, game_name=game_name, draw_game_over=False)
-            )
+            engine.step(command)
+            frames.append(engine.render_current_frame())
 
             send_progress(
                 task_id,
@@ -104,7 +64,7 @@ def generate_game_gif(
                 total_steps=total_commands,
             )
 
-            if game.game_over:
+            if engine.game_over:
                 send_progress(
                     task_id,
                     channel_name,
@@ -128,86 +88,38 @@ def generate_game_gif(
         )
         return ""
 
-    if game_name == "snake" and game.game_over:
-        final_board = game._get_board()
-
-        dead_frame = render_board_to_image(
-            final_board, game_name=game_name, draw_game_over=False
-        )
-        frames.append(dead_frame)
-
-        game_over_frame = render_board_to_image(
-            final_board, game_name=game_name, draw_game_over=True, score=int(game.score)
-        )
-        for _ in range(4):
-            frames.append(game_over_frame)
-
-    with io.BytesIO() as gif_io:
-        imageio.mimsave(gif_io, frames, format="GIF", fps=5, loop=0)
-        gif_bytes = gif_io.getvalue()
-
-    object_name = f"games/{game_name}/{hash_key}.gif"
-    s3_client = get_s3_sync_client()
+    frames.extend(engine.get_final_frames())
 
     try:
+        object_name = f"games/{game_name}/{hash_key}.gif"
+        gif_bytes = create_gif_bytes(frames, fps=5)
+
+        s3_client = get_s3_sync_client()
         s3_client.upload_file_bytes(
             file_bytes=gif_bytes, object_name=object_name, is_public=False
         )
-
         download_url = s3_client.get_file_url(object_name, is_public=False)
-        score = int(game.score)
 
-        steps_count = getattr(game, "steps_count", len(commands))
-
-        with get_sync_session() as session:
-            new_render = GameRender(
-                game_name=game_name,
-                seed=seed,
-                score=int(score),
-                steps_count=int(steps_count),
-                season_id=settings.CURRENT_SEASON_ID,
-                commands_hash=hash_key,
-                s3_key=object_name,
-            )
-            session.add(new_render)
-            session.flush()
-
-            stmt = insert(Leaderboard).values(
-                user_id=user_id,
-                game_name=game_name,
-                score=int(score),
-                steps_count=int(steps_count),
-                render_id=new_render.id,
-                season_id=settings.CURRENT_SEASON_ID,
-                seed=seed,
-            )
-
-            safe_stmt = stmt.on_conflict_do_nothing(
-                index_elements=["user_id", "render_id"]
-            )
-
-            session.execute(safe_stmt)
-            session.commit()
-
-            cache_data = GameRenderResultDTO(
-                render_id=new_render.id,
-                score=int(score),
-                steps_count=int(steps_count),
-                download_url=download_url,
-            )
-
-            redis_client.set(cache_key, cache_data.model_dump_json(), ex=86400)
-
-            logger.info(
-                f"[{game_name.upper()}] Game render and high score saved to database. "
-                f"Render: {object_name}, Score: {score}, Steps: {steps_count}"
-            )
+        render_id = GameRenderRepository.save_game_results_to_sync_db(
+            user_id=user_id,
+            game_name=game_name,
+            seed=seed,
+            score=engine.score,
+            steps_count=engine.steps_count,
+            hash_key=hash_key,
+            object_name=object_name,
+        )
 
         result = GameRenderResultDTO(
-            render_id=new_render.id,
-            score=int(score),
-            steps_count=int(steps_count),
+            render_id=render_id,
+            score=engine.score,
+            steps_count=engine.steps_count,
             download_url=download_url,
+        )
+        redis_client.set(cache_key, result.model_dump_json(), ex=86400)
+
+        logger.info(
+            f"[{game_name.upper()}] Render saved. Score: {engine.score}, Steps: {engine.steps_count}"
         )
 
         send_progress(
@@ -218,7 +130,6 @@ def generate_game_gif(
             total_steps=1,
             result=result,
         )
-
         return result.model_dump(mode="json")
 
     except Exception as e:
@@ -229,5 +140,4 @@ def generate_game_gif(
             )
             redis_client.delete(cache_key)
             send_progress(task_id, channel_name, RenderStatus.FAILED, error=str(e))
-        return_raise = e
-        raise return_raise
+        raise e
