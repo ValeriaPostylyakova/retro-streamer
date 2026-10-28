@@ -24,7 +24,13 @@ logger = logging.getLogger(__name__)
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def generate_game_gif(
-    self, game_name: str, seed: int, commands: list, hash_key: str, user_id: UUID
+    self,
+    game_name: str,
+    seed: int,
+    commands: list,
+    hash_key: str,
+    user_id: UUID,
+    lock_key: str,
 ):
     random.seed(seed)
     task_id = self.request.id
@@ -139,5 +145,9 @@ def generate_game_gif(
                 f"Task {task_id} failed after max retries. Cleaning up Redis."
             )
             redis_client.delete(cache_key)
+            redis_client.delete(lock_key)
             send_progress(task_id, channel_name, RenderStatus.FAILED, error=str(e))
         raise e
+
+    finally:
+        redis_client.delete(lock_key)

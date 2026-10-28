@@ -37,7 +37,7 @@ async def get_game_info_dynamic(
 async def play_game_dynamic(
     current_user: CurrentUser,
     request_data: RenderRequest,
-    _=Depends(role_rate_limiter()),
+    _=Depends(role_rate_limiter),
     service: GameRenderService = Depends(get_game_render_service),
 ):
 
@@ -46,7 +46,11 @@ async def play_game_dynamic(
     return await service.process_game_render(current_user.id, actual_game_request)
 
 
-@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+@router.get(
+    "/tasks/{task_id}",
+    summary="Получение статуса генерации прохождения игры",
+    response_model=TaskStatusResponse,
+)
 async def get_task_status(
     current_user: CurrentUser,
     task_id: str,

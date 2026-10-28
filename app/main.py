@@ -22,7 +22,13 @@ async def lifespan(app: FastAPI):
     await redis_async_client.close()
 
 
-app = FastAPI(title="fastapi_task_manager", lifespan=lifespan, debug=settings.DEBUG)
+app = FastAPI(
+    title="Retro-Streamer",
+    version="1.0.0",
+    description="Backend-сервис для запуска ретро-игр, асинхронной генерации GIF-прохождений и публикации результатов в таблице лидеров.",
+    lifespan=lifespan,
+    debug=settings.DEBUG,
+)
 
 app.include_router(api_router, prefix="/api/v1")
 

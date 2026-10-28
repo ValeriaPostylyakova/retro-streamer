@@ -9,6 +9,7 @@ from app.auth.schemas import (
     UserResponse,
 )
 from app.auth.services import AuthService
+from app.core.exceptions import ApplicationError
 from app.core.security import delete_refresh_token, set_refresh_cookie
 
 router = APIRouter()
@@ -77,13 +78,15 @@ async def refresh_token(
     refresh_token: str = Cookie(None),
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    if refresh_token:
-        access_token, new_refresh_token = await auth_service.rotate_refresh_token(
-            refresh_token
-        )
+    if not refresh_token:
+        raise ApplicationError(detail="Refresh token отсутствует", status_code=401)
 
-        set_refresh_cookie(response, new_refresh_token)
-        return TokenResponse(access_token=access_token)
+    access_token, new_refresh_token = await auth_service.rotate_refresh_token(
+        refresh_token
+    )
+
+    set_refresh_cookie(response, new_refresh_token)
+    return TokenResponse(access_token=access_token)
 
 
 @router.post(

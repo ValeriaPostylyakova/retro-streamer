@@ -127,12 +127,22 @@ class GameRenderService:
                 render_id=db_record.id,
             )
 
+        lock_key = RedisKeyManager.game_render_lock(hash_key)
+        is_locked = await self.redis_client.set(lock_key, "processing", nx=True, ex=300)
+
+        if not is_locked:
+            raise ApplicationError(
+                detail="Данный рендеринг уже находится в процессе. Пожалуйста, подождите.",
+                status_code=429,
+            )
+
         task = generate_game_gif.delay(
             game_name=request_data.game_name,
             seed=request_data.seed,
             commands=request_data.commands,
             hash_key=hash_key,
             user_id=user_id,
+            lock_key=lock_key,
         )
 
         owner_key = RedisKeyManager.task_owner(task.id)
@@ -237,7 +247,12 @@ class GameRenderService:
                 download_url=raw_result["download_url"],
             )
         elif state == RenderStatus.FAILED:
-            error_message = str(result_data)
+            task_error = async_result.result
+            error_message = (
+                str(task_error)
+                if task_error
+                else f"Задача {task_id} завершилась с ошибкой"
+            )
 
         return TaskStatusResponse(
             task_id=task_id,

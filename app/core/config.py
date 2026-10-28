@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = Field(default="super_secret_key_12345")
     JWT_ISSUER: str = Field(default="my-api")
     JWT_AUDIENCE: str = Field(default="my-frontend")
+
     COOKIE_SECURE: bool = Field(default=False)
     COOKIE_SAMESITE: str = Field(default="lax")
 

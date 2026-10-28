@@ -10,3 +10,7 @@ class RedisKeyManager:
     @staticmethod
     def game_render_progress(task_id: str) -> str:
         return f"game:render:progress:{task_id}"
+
+    @staticmethod
+    def game_render_lock(hash_key: str) -> str:
+        return f"game:render:lock:{hash_key}"
