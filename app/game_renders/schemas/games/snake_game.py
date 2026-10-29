@@ -11,7 +11,7 @@ class SnakeRenderRequest(BaseModel):
         examples=[["up", "down", "left", "right"]],
     )
     seed: int = 5
-    game_name: Literal["snake"] = "snake"
+    game_name: Literal["snake"]
 
 
 class SnakeRules(BaseModel):

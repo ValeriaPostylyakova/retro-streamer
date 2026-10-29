@@ -23,17 +23,16 @@ from .games.sokoban_game import (
     SokobanRenderRequest,
 )
 
-GameRequestUnion = Annotated[
+GameRequestUnion = (
     SnakeRenderRequest
     | SokobanRenderRequest
     | Game2048RenderRequest
-    | LabyrinthRenderRequest,
-    Field(discriminator="game_name"),
-]
+    | LabyrinthRenderRequest
+)
 
 
-class RenderRequest(RootModel[GameRequestUnion]):
-    pass
+class RenderRequest(BaseModel):
+    request: GameRequestUnion = Field(..., discriminator="game_name")
 
 
 GameInfoUnion = Annotated[

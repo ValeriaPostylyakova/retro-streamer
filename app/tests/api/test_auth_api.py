@@ -78,7 +78,7 @@ async def test_login_returns_tokens_and_sets_refresh_cookie(client, auth_service
 
     response = await client.post(
         f"{AUTH_PREFIX}/login",
-        json={"email": user.email, "password": "strong-password"},
+        data={"username": user.email, "password": "strong-password"},
     )
 
     assert response.status_code == 200
@@ -98,7 +98,7 @@ async def test_login_rejects_invalid_credentials(client, auth_service):
 
     response = await client.post(
         f"{AUTH_PREFIX}/login",
-        json={"email": "player@example.com", "password": "wrong-password"},
+        data={"username": "player@example.com", "password": "wrong-password"},
     )
 
     assert response.status_code == 401

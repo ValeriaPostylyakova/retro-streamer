@@ -23,16 +23,10 @@ class RegisterRequest(BaseModel):
         return self
 
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
 class TokenResponse(BaseResponse):
     access_token: str
     token_type: str = "bearer"
 
 
-class UserResponse(BaseResponse):
-    tokens: TokenResponse
+class UserResponse(TokenResponse):
     user: BaseUser

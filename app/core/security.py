@@ -9,7 +9,6 @@ from fastapi import HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
-from pydantic import ValidationError
 
 from app.core.config import settings
 
@@ -17,7 +16,7 @@ ALGORITHM = "HS256"
 
 password_hash = PasswordHash.recommended()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def hash_password(password: str) -> str:
@@ -116,17 +115,3 @@ def delete_refresh_token(response: Response):
         secure=settings.COOKIE_SECURE,
         samesite=settings.COOKIE_SAMESITE,
     )
-
-
-async def get_current_user_ws(token: str) -> UUID:
-    try:
-        payload = decode_access_token(token)
-
-        user_id_str = payload.get("sub")
-        return UUID(user_id_str)
-
-    except (InvalidTokenError, ValidationError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )

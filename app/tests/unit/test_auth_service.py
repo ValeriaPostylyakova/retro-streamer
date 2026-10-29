@@ -2,9 +2,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.auth.models import User, UserSession
-from app.auth.schemas import LoginRequest, RegisterRequest
+from app.auth.schemas import RegisterRequest
 from app.core.config import settings
 from app.core.exceptions import ApplicationError
 
@@ -90,8 +91,9 @@ async def test_authenticate_user_success(
         "app.auth.services.create_access_token", lambda uid: "access:" + str(uid)
     )
 
+    form_data = OAuth2PasswordRequestForm(username=user.email, password="super-secret")
     result_user, access_token, refresh_token = await auth_service.authenticate_user(
-        LoginRequest(email=user.email, password="super-secret")
+        form_data
     )
 
     assert result_user is user
@@ -104,10 +106,11 @@ async def test_authenticate_user_success(
 async def test_authenticate_user_unknown_email_rejected(auth_service, auth_repository):
     auth_repository.get_user_by_email.return_value = None
 
+    form_data = OAuth2PasswordRequestForm(
+        username="missing@example.com", password="super-secret"
+    )
     with pytest.raises(ApplicationError) as exc_info:
-        await auth_service.authenticate_user(
-            LoginRequest(email="missing@example.com", password="super-secret")
-        )
+        await auth_service.authenticate_user(form_data)
 
     assert exc_info.value.status_code == 401
     auth_repository.create_user_session.assert_not_awaited()
@@ -122,10 +125,11 @@ async def test_authenticate_user_wrong_password_rejected(
         "app.auth.services.verify_password", lambda password, hashed: False
     )
 
+    form_data = OAuth2PasswordRequestForm(
+        username=user.email, password="wrong-password"
+    )
     with pytest.raises(ApplicationError) as exc_info:
-        await auth_service.authenticate_user(
-            LoginRequest(email=user.email, password="wrong-password")
-        )
+        await auth_service.authenticate_user(form_data)
 
     assert exc_info.value.status_code == 401
     auth_repository.create_user_session.assert_not_awaited()
@@ -141,10 +145,9 @@ async def test_inactive_user_cannot_authenticate(
         "app.auth.services.verify_password", lambda password, hashed: True
     )
 
+    form_data = OAuth2PasswordRequestForm(username=user.email, password="super-secret")
     with pytest.raises(ApplicationError) as exc_info:
-        await auth_service.authenticate_user(
-            LoginRequest(email=user.email, password="super-secret")
-        )
+        await auth_service.authenticate_user(form_data)
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Пользователь заблокирован"

@@ -57,7 +57,8 @@ REDIS_PORT=6379
 
 S3_KEY_ID=minioadmin
 S3_SECRET=change-this-minio-password
-S3_ENDPOINT_URL=http://minio:9000
+S3_INTERNAL_URL=http://minio:9000
+S3_EXTERNAL_URL=http://localhost:9000
 S3_PUBLIC_BUCKET=retro-streamer-public
 S3_PRIVATE_BUCKET=retro-streamer-private
 
@@ -82,9 +83,9 @@ CURRENT_SEASON_ID=1
 2. Проверьте настройки окружения и переменные, необходимые сервисам, согласно конфигурации проекта.
 3. Запустите приложение:
 
-   ```bash
-   docker compose up --build
-   ```
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+```
 
 4. Откройте документацию API:
 
@@ -96,7 +97,7 @@ CURRENT_SEASON_ID=1
 Для остановки контейнеров используйте:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.yml -f docker-compose.local.yml down
 ```
 
 ## Документация

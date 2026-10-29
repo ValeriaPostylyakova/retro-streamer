@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Cookie, Depends, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.openapi_docs import (
     DELETE_REFRESH_COOKIE_HEADER,
@@ -12,7 +13,6 @@ from app.api.openapi_docs import (
 from app.auth.dependencies import get_auth_service
 from app.auth.schemas import (
     BaseUser,
-    LoginRequest,
     RegisterRequest,
     TokenResponse,
     UserResponse,
@@ -61,7 +61,8 @@ async def register(
     )
     set_refresh_cookie(response, refresh_token)
     return UserResponse(
-        tokens=TokenResponse(access_token=access_token, token_type="bearer"),
+        access_token=access_token,
+        token_type="bearer",
         user=BaseUser(
             id=created_user.id, email=created_user.email, role=created_user.role
         ),
@@ -101,13 +102,14 @@ async def register(
 )
 async def login_for_access_token(
     response: Response,
-    form_data: LoginRequest,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     user, access_token, refresh_token = await auth_service.authenticate_user(form_data)
     set_refresh_cookie(response, refresh_token)
     return UserResponse(
-        tokens=TokenResponse(access_token=access_token, token_type="bearer"),
+        access_token=access_token,
+        token_type="bearer",
         user=BaseUser(id=user.id, email=user.email, role=user.role),
     )
 

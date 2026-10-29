@@ -11,7 +11,7 @@ class SokobanRenderRequest(BaseModel):
         examples=[["up", "right", "right", "down"]],
     )
     seed: int = 7
-    game_name: Literal["sokoban"] = "sokoban"
+    game_name: Literal["sokoban"]
 
 
 class SokobanRules(BaseModel):

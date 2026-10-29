@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Annotated
+from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from jwt.exceptions import InvalidTokenError
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -52,3 +54,17 @@ CurrentUser = Annotated[
     "User",
     Depends(get_current_user),
 ]
+
+
+async def get_current_user_ws(token: str) -> UUID:
+    try:
+        payload = decode_access_token(token)
+
+        user_id_str = payload.get("sub")
+        return UUID(user_id_str)
+
+    except (InvalidTokenError, ValidationError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )

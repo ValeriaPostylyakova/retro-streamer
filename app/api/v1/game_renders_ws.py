@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket
 
-from app.core.security import get_current_user_ws
+from app.auth.dependencies import get_current_user_ws
 from app.game_renders.dependencies import get_game_render_websocket_service
 from app.game_renders.services.websocket_service import GameRenderWebSocketService
 

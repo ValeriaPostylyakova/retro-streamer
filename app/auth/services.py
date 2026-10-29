@@ -1,10 +1,11 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from fastapi.security import OAuth2PasswordRequestForm
+
 from app.auth.models import User, UserSession
 from app.auth.repositories import AuthRepository
 from app.auth.schemas import (
-    LoginRequest,
     RegisterRequest,
 )
 from app.core.config import settings
@@ -58,8 +59,10 @@ class AuthService:
         )
         return created_user, access_token, refresh_token
 
-    async def authenticate_user(self, form_data: LoginRequest) -> tuple[User, str, str]:
-        user = await self.repository.get_user_by_email(form_data.email)
+    async def authenticate_user(
+        self, form_data: OAuth2PasswordRequestForm
+    ) -> tuple[User, str, str]:
+        user = await self.repository.get_user_by_email(form_data.username)
         if user is None or not verify_password(
             form_data.password, user.hashed_password
         ):

@@ -1,0 +1,38 @@
+version: '3.8'
+
+x-local-volumes: &local-volumes
+  volumes:
+    - .:/app  
+
+services:
+  migrations:
+    <<: *local-volumes
+
+  fastapi_server:
+    <<: *local-volumes
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --forwarded-allow-ips='*'
+
+  celery_worker:
+    <<: *local-volumes
+    command: watchfiles --filter python "celery -A app.core.celery_app worker --loglevel=info"
+
+  flower:
+    <<: *local-volumes
+    ports:
+      - "5555:5555"
+    command: celery -A app.core.celery_app flower --port=5555
+
+  db:
+    ports:
+      - "5433:5432"  
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"

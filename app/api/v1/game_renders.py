@@ -88,7 +88,7 @@ async def play_game_dynamic(
     service: GameRenderService = Depends(get_game_render_service),
 ):
 
-    actual_game_request = request_data.root
+    actual_game_request = request_data.request
 
     return await service.process_game_render(current_user.id, actual_game_request)
 

@@ -155,7 +155,8 @@ EXAMPLE_RENDER_ID = "b7a1c0de-52e4-4c6a-8f0e-9d3a7c2b1e55"
 EXAMPLE_DOWNLOAD_URL = "http://localhost:9000/games/snake/example.gif"
 
 EXAMPLE_USER_RESPONSE = {
-    "tokens": {"access_token": EXAMPLE_ACCESS_TOKEN, "token_type": "bearer"},
+    "access_token": EXAMPLE_ACCESS_TOKEN,
+    "token_type": "bearer",
     "user": {"id": EXAMPLE_USER_ID, "email": "player@example.com", "role": "default"},
 }
 

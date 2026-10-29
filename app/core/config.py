@@ -21,7 +21,8 @@ class Settings(BaseSettings):
 
     S3_KEY_ID: str = Field(default="minioadmin")
     S3_SECRET: str = Field(default="minioadmin")
-    S3_ENDPOINT_URL: str = Field(default="http://minio:9000")
+    S3_EXTERNAL_URL: str = Field(default="http://minio:9000")
+    S3_INTERNAL_URL: str = Field(default="http://localhost:9000")
 
     S3_PUBLIC_BUCKET: str = Field(default="retro-streamer-public")
     S3_PRIVATE_BUCKET: str = Field(default="retro-streamer-private")

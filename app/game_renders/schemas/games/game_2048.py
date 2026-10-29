@@ -11,7 +11,7 @@ class Game2048RenderRequest(BaseModel):
         examples=[["left", "up", "right", "down"]],
     )
     seed: int = 2048
-    game_name: Literal["2048"] = "2048"
+    game_name: Literal["2048"]
 
 
 class Game2048Rules(BaseModel):

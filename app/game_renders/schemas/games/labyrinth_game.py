@@ -11,7 +11,7 @@ class LabyrinthRenderRequest(BaseModel):
         examples=[["right", "none", "up", "left"]],
     )
     seed: int = 11
-    game_name: Literal["labyrinth"] = "labyrinth"
+    game_name: Literal["labyrinth"]
 
 
 class LabyrinthRules(BaseModel):
