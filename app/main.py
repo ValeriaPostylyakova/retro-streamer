@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 import app.models
+from app.api.openapi_docs import APP_DESCRIPTION, TAGS_METADATA
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.exceptions import ApplicationError
@@ -25,7 +26,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Retro-Streamer",
     version="1.0.0",
-    description="Backend-сервис для запуска ретро-игр, асинхронной генерации GIF-прохождений и публикации результатов в таблице лидеров.",
+    description=APP_DESCRIPTION,
+    openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
     debug=settings.DEBUG,
 )
